@@ -29,7 +29,7 @@ class McdProductCard extends StatelessWidget {
               children: [
                 // Image Container
                 Container(
-                  height: 140,
+                  height: 120,
                   decoration: BoxDecoration(
                     color: AppTheme.backgroundColor,
                     borderRadius: const BorderRadius.only(
@@ -118,103 +118,92 @@ class McdProductCard extends StatelessWidget {
             ),
 
             // Product Info
-            Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Category Badge
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppTheme.primaryYellow.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(
-                      product.category,
-                      style: const TextStyle(
-                        color: AppTheme.textPrimary,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(10),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Category Badge
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primaryYellow.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        product.category,
+                        style: const TextStyle(
+                          color: AppTheme.textPrimary,
+                          fontSize: 9,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
-                  ),
 
-                  const SizedBox(height: 8),
+                    const SizedBox(height: 6),
 
-                  // Product Name
-                  Text(
-                    product.name,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: AppTheme.textPrimary,
-                      height: 1.2,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-
-                  const SizedBox(height: 4),
-
-                  // Description
-                  if (product.description.isNotEmpty)
+                    // Product Name
                     Text(
-                      product.description,
+                      product.name,
                       style: const TextStyle(
-                        fontSize: 12,
-                        color: AppTheme.textSecondary,
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.textPrimary,
+                        height: 1.2,
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
 
-                  const SizedBox(height: 12),
+                    const Spacer(),
 
-                  // Price and Add Button
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      // Price
-                      Expanded(
-                        child: Text(
-                          Helpers.formatCurrency(product.price),
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: AppTheme.primaryRed,
+                    // Price and Add Button
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        // Price
+                        Expanded(
+                          child: Text(
+                            Helpers.formatCurrency(product.price),
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.primaryRed,
+                            ),
                           ),
                         ),
-                      ),
 
-                      // Add Button Icon
-                      if (isAvailable)
-                        Container(
-                          height: 36,
-                          width: 36,
-                          decoration: BoxDecoration(
-                            color: AppTheme.primaryRed,
-                            borderRadius: BorderRadius.circular(18),
-                            boxShadow: [
-                              BoxShadow(
-                                color: AppTheme.primaryRed.withOpacity(0.3),
-                                blurRadius: 8,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
+                        // Add Button Icon
+                        if (isAvailable)
+                          Container(
+                            height: 32,
+                            width: 32,
+                            decoration: BoxDecoration(
+                              color: AppTheme.primaryRed,
+                              borderRadius: BorderRadius.circular(16),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppTheme.primaryRed.withOpacity(0.3),
+                                  blurRadius: 6,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: const Icon(
+                              Icons.add,
+                              color: Colors.white,
+                              size: 18,
+                            ),
                           ),
-                          child: const Icon(
-                            Icons.add,
-                            color: Colors.white,
-                            size: 20,
-                          ),
-                        ),
-                    ],
-                  ),
-                ],
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
           ],
