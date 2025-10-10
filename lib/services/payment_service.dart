@@ -1,9 +1,17 @@
 import '../models/payment.dart';
 import '../config/api_config.dart';
 import 'api_service.dart';
+import 'package:dio/dio.dart';
 
 class PaymentService {
   final ApiService _apiService = ApiService();
+  final Dio _dio = Dio(
+    BaseOptions(
+      connectTimeout: ApiConfig.connectionTimeout,
+      receiveTimeout: ApiConfig.receiveTimeout,
+      headers: ApiConfig.headers,
+    ),
+  );
 
   // Create payment with items (directly to backend like web)
   Future<Payment> createPayment({
@@ -50,14 +58,22 @@ class PaymentService {
   // Create Midtrans transaction
   Future<PaymentResponse> createTransaction(PaymentRequest request) async {
     try {
-      // Call frontend API endpoint for payment creation
-      final response = await _apiService.post(
+      print('🔄 Creating Midtrans transaction...');
+      print('📦 Request body: ${request.toJson()}');
+
+      // Call frontend API endpoint for payment creation using Dio directly
+      final response = await _dio.post(
         ApiEndpoints.createPayment,
-        body: request.toJson(),
+        data: request.toJson(),
       );
 
-      return PaymentResponse.fromJson(response);
+      print('✅ Midtrans response: ${response.data}');
+      return PaymentResponse.fromJson(response.data);
     } catch (e) {
+      if (e is DioException) {
+        print('❌ Dio Error: ${e.response?.statusCode} - ${e.response?.data}');
+        print('❌ URL: ${e.requestOptions.uri}');
+      }
       print('Error creating transaction: $e');
       rethrow;
     }
