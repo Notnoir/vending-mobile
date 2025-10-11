@@ -18,8 +18,30 @@ class ProductService {
         '${ApiEndpoints.products}/available',
       );
 
-      // Response format: { machine_id: "VM01", products: [...] }
-      final List<dynamic> productsJson = response['products'] ?? response;
+      // Handle new Supabase response format: { success: true, data: [...] }
+      // Or legacy format: { machine_id: "VM01", products: [...] }
+      List<dynamic> productsJson;
+
+      if (response is Map<String, dynamic>) {
+        // New format with "data" key
+        if (response.containsKey('data')) {
+          productsJson = response['data'] as List<dynamic>;
+        }
+        // Legacy format with "products" key
+        else if (response.containsKey('products')) {
+          productsJson = response['products'] as List<dynamic>;
+        }
+        // Direct array response
+        else {
+          throw Exception('Unexpected response format: $response');
+        }
+      }
+      // Direct array response
+      else if (response is List) {
+        productsJson = response;
+      } else {
+        throw Exception('Unexpected response type: ${response.runtimeType}');
+      }
 
       // Debug: Print first product to see structure
       if (productsJson.isNotEmpty) {

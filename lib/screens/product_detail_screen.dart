@@ -109,13 +109,24 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     (widget.product.imageUrl != null &&
                         widget.product.imageUrl!.isNotEmpty)
                     ? Image.network(
-                        widget.product.imageUrl!,
+                        Helpers.getImageUrl(widget.product.imageUrl),
                         fit: BoxFit.cover,
                         errorBuilder: (context, error, stackTrace) {
                           return const Icon(
                             Icons.image_not_supported,
                             size: 100,
                             color: Colors.grey,
+                          );
+                        },
+                        loadingBuilder: (context, child, loadingProgress) {
+                          if (loadingProgress == null) return child;
+                          return Center(
+                            child: CircularProgressIndicator(
+                              value: loadingProgress.expectedTotalBytes != null
+                                  ? loadingProgress.cumulativeBytesLoaded /
+                                        loadingProgress.expectedTotalBytes!
+                                  : null,
+                            ),
                           );
                         },
                       )

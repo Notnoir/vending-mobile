@@ -26,13 +26,24 @@ class ProductCard extends StatelessWidget {
                 child:
                     (product.imageUrl != null && product.imageUrl!.isNotEmpty)
                     ? Image.network(
-                        product.imageUrl!,
+                        Helpers.getImageUrl(product.imageUrl),
                         fit: BoxFit.cover,
                         errorBuilder: (context, error, stackTrace) {
                           return const Icon(
                             Icons.image_not_supported,
                             size: 50,
                             color: Colors.grey,
+                          );
+                        },
+                        loadingBuilder: (context, child, loadingProgress) {
+                          if (loadingProgress == null) return child;
+                          return Center(
+                            child: CircularProgressIndicator(
+                              value: loadingProgress.expectedTotalBytes != null
+                                  ? loadingProgress.cumulativeBytesLoaded /
+                                        loadingProgress.expectedTotalBytes!
+                                  : null,
+                            ),
                           );
                         },
                       )

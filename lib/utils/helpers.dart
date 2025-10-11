@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../config/api_config.dart';
 
 class Helpers {
   // Format currency (Indonesian Rupiah)
@@ -10,6 +11,36 @@ class Helpers {
       decimalDigits: 0,
     );
     return formatter.format(amount);
+  }
+
+  // Get full image URL (handles both Supabase Storage and local uploads)
+  static String getImageUrl(String? imageUrl) {
+    // Return placeholder if no image
+    if (imageUrl == null || imageUrl.isEmpty) {
+      return '';
+    }
+
+    // If already absolute URL (Supabase Storage or full URL), return as is
+    if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+      return imageUrl;
+    }
+
+    // If relative path (local upload), prepend backend URL
+    // Remove /api from base URL and add the image path
+    final backendUrl = ApiConfig.baseUrl.replaceAll('/api', '');
+    return '$backendUrl$imageUrl';
+  }
+
+  // Check if image URL is from Supabase Storage
+  static bool isSupabaseStorageUrl(String? imageUrl) {
+    if (imageUrl == null || imageUrl.isEmpty) return false;
+    return imageUrl.contains('supabase.co/storage/v1/object/public');
+  }
+
+  // Check if image URL is local upload
+  static bool isLocalUploadUrl(String? imageUrl) {
+    if (imageUrl == null || imageUrl.isEmpty) return false;
+    return imageUrl.startsWith('/uploads/');
   }
 
   // Format date

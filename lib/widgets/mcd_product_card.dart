@@ -44,11 +44,23 @@ class McdProductCard extends StatelessWidget {
                     ),
                     child: product.imageUrl != null
                         ? Image.network(
-                            product.imageUrl!,
+                            Helpers.getImageUrl(product.imageUrl),
                             width: double.infinity,
                             fit: BoxFit.cover,
                             errorBuilder: (context, error, stackTrace) {
                               return _buildPlaceholder();
+                            },
+                            loadingBuilder: (context, child, loadingProgress) {
+                              if (loadingProgress == null) return child;
+                              return Center(
+                                child: CircularProgressIndicator(
+                                  value:
+                                      loadingProgress.expectedTotalBytes != null
+                                      ? loadingProgress.cumulativeBytesLoaded /
+                                            loadingProgress.expectedTotalBytes!
+                                      : null,
+                                ),
+                              );
                             },
                           )
                         : _buildPlaceholder(),

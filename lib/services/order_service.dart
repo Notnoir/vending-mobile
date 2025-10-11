@@ -27,23 +27,17 @@ class OrderService {
   }
 
   // Get all orders (order history)
+  // Note: Mobile app doesn't have order history endpoint
+  // This returns empty list for now
   Future<List<Order>> getAllOrders() async {
     try {
-      final response = await _apiService.get(
-        '${ApiEndpoints.orders}/history/all',
-      );
-
-      // Response is already an array
-      if (response is List) {
-        return response.map((json) => Order.fromJson(json)).toList();
-      }
-
-      // Fallback if response has orders key
-      final List<dynamic> ordersJson = response['orders'] ?? response;
-      return ordersJson.map((json) => Order.fromJson(json)).toList();
+      // Mobile app doesn't need full order history
+      // Return empty list
+      print('getAllOrders: Not implemented for mobile app');
+      return [];
     } catch (e) {
       print('Error getting orders: $e');
-      rethrow;
+      return [];
     }
   }
 
