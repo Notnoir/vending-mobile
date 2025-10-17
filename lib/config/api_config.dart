@@ -10,11 +10,14 @@ class ApiConfig {
   // static const String frontendUrl = 'http://10.0.2.2:3000'; // Android Emulator
   // static const String developmentUrl = 'http://localhost:3001/api'; // iOS Simulator
   // static const String frontendUrl = 'http://localhost:3000'; // iOS Simulator
-  static const String productionUrl = 'https://your-backend.com/api';
-  static const String productionFrontendUrl = 'https://your-frontend.com';
+
+  // Production URLs - Update with your actual Render & Vercel URLs
+  static const String productionUrl = 'https://vending-be.onrender.com/api';
+  static const String productionFrontendUrl = 'https://vending-fe.vercel.app';
 
   // Current environment
-  static const bool isProduction = false;
+  // GANTI ke true untuk menggunakan production API
+  static const bool isProduction = true;
 
   // Get active base URL
   static String get baseUrl => isProduction ? productionUrl : developmentUrl;
