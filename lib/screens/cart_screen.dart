@@ -17,13 +17,13 @@ class CartScreen extends StatelessWidget {
           'Keranjang',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
-        backgroundColor: AppTheme.primaryRed,
+        backgroundColor: AppTheme.primaryBlue,
         foregroundColor: Colors.white,
         elevation: 0,
         flexibleSpace: Container(
           decoration: const BoxDecoration(
             gradient: LinearGradient(
-              colors: [AppTheme.primaryRed, AppTheme.darkRed],
+              colors: [AppTheme.primaryBlue, AppTheme.darkBlue],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -61,14 +61,14 @@ class CartScreen extends StatelessWidget {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
                                 content: Text('Keranjang dikosongkan'),
-                                backgroundColor: AppTheme.primaryRed,
+                                backgroundColor: AppTheme.primaryBlue,
                               ),
                             );
                           },
                           child: const Text(
                             'Hapus Semua',
                             style: TextStyle(
-                              color: AppTheme.primaryRed,
+                              color: AppTheme.primaryBlue,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -100,7 +100,7 @@ class CartScreen extends StatelessWidget {
                     Icon(
                       Icons.shopping_cart_outlined,
                       size: 100,
-                      color: AppTheme.primaryRed,
+                      color: AppTheme.primaryBlue,
                     ),
                     SizedBox(height: 16),
                     Text(
@@ -108,7 +108,7 @@ class CartScreen extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
-                        color: AppTheme.primaryRed,
+                        color: AppTheme.primaryBlue,
                       ),
                     ),
                     SizedBox(height: 8),
@@ -204,7 +204,7 @@ class CartScreen extends StatelessWidget {
                             vertical: 4,
                           ),
                           decoration: BoxDecoration(
-                            color: AppTheme.primaryYellow,
+                            color: AppTheme.softBlue,
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text(
@@ -212,7 +212,7 @@ class CartScreen extends StatelessWidget {
                             style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
-                              color: AppTheme.darkRed,
+                              color: AppTheme.primaryBlue,
                             ),
                           ),
                         ),
@@ -234,7 +234,7 @@ class CartScreen extends StatelessWidget {
                           style: const TextStyle(
                             fontSize: 24,
                             fontWeight: FontWeight.bold,
-                            color: AppTheme.primaryRed,
+                            color: AppTheme.primaryBlue,
                           ),
                         ),
                       ],
@@ -253,10 +253,10 @@ class CartScreen extends StatelessWidget {
                           );
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: AppTheme.primaryYellow,
-                          foregroundColor: AppTheme.darkRed,
+                          backgroundColor: AppTheme.primaryBlue,
+                          foregroundColor: Colors.white,
                           elevation: 4,
-                          shadowColor: AppTheme.primaryYellow.withOpacity(0.5),
+                          shadowColor: AppTheme.primaryBlue.withOpacity(0.5),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),

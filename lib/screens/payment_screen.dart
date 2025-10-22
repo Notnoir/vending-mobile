@@ -366,13 +366,13 @@ class _PaymentScreenState extends State<PaymentScreen> {
           'Pembayaran',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
-        backgroundColor: AppTheme.primaryRed,
+        backgroundColor: AppTheme.primaryBlue,
         foregroundColor: Colors.white,
         elevation: 0,
         flexibleSpace: Container(
           decoration: const BoxDecoration(
             gradient: LinearGradient(
-              colors: [AppTheme.primaryRed, AppTheme.darkRed],
+              colors: [AppTheme.primaryBlue, AppTheme.darkBlue],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -389,7 +389,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
         ),
         child: _isLoading
             ? const Center(
-                child: CircularProgressIndicator(color: AppTheme.primaryRed),
+                child: CircularProgressIndicator(color: AppTheme.primaryBlue),
               )
             : _errorMessage != null
             ? Center(
@@ -399,7 +399,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                     const Icon(
                       Icons.error_outline,
                       size: 60,
-                      color: AppTheme.primaryRed,
+                      color: AppTheme.primaryBlue,
                     ),
                     const SizedBox(height: 16),
                     Padding(
@@ -408,7 +408,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                         _errorMessage!,
                         textAlign: TextAlign.center,
                         style: const TextStyle(
-                          color: AppTheme.primaryRed,
+                          color: AppTheme.primaryBlue,
                           fontSize: 16,
                         ),
                       ),
@@ -422,8 +422,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
                         });
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.primaryYellow,
-                        foregroundColor: AppTheme.darkRed,
+                        backgroundColor: AppTheme.accentBlue,
+                        foregroundColor: AppTheme.darkBlue,
                         padding: const EdgeInsets.symmetric(
                           horizontal: 32,
                           vertical: 16,
@@ -441,7 +441,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
             ? _buildPaymentMethodSelection()
             : _payment == null
             ? const Center(
-                child: CircularProgressIndicator(color: AppTheme.primaryRed),
+                child: CircularProgressIndicator(color: AppTheme.primaryBlue),
               )
             : _buildPaymentDetails(),
       ),
@@ -477,19 +477,19 @@ class _PaymentScreenState extends State<PaymentScreen> {
                 children: [
                   const Row(
                     children: [
-                      Icon(Icons.shopping_cart, color: AppTheme.primaryRed),
+                      Icon(Icons.shopping_cart, color: AppTheme.primaryBlue),
                       SizedBox(width: 8),
                       Text(
                         'Ringkasan Pesanan',
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
-                          color: AppTheme.darkRed,
+                          color: AppTheme.darkBlue,
                         ),
                       ),
                     ],
                   ),
-                  const Divider(height: 24, color: AppTheme.primaryYellow),
+                  const Divider(height: 24, color: AppTheme.accentBlue),
                   ...cartProvider.items.map(
                     (item) => Padding(
                       padding: const EdgeInsets.symmetric(vertical: 4),
@@ -508,14 +508,14 @@ class _PaymentScreenState extends State<PaymentScreen> {
                             ),
                             style: const TextStyle(
                               fontWeight: FontWeight.w600,
-                              color: AppTheme.darkRed,
+                              color: AppTheme.darkBlue,
                             ),
                           ),
                         ],
                       ),
                     ),
                   ),
-                  const Divider(height: 24, color: AppTheme.primaryYellow),
+                  const Divider(height: 24, color: AppTheme.accentBlue),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -524,7 +524,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
-                          color: AppTheme.darkRed,
+                          color: AppTheme.darkBlue,
                         ),
                       ),
                       Text(
@@ -532,7 +532,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                         style: const TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
-                          color: AppTheme.primaryRed,
+                          color: AppTheme.primaryBlue,
                         ),
                       ),
                     ],
@@ -549,7 +549,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: AppTheme.darkRed,
+              color: AppTheme.darkBlue,
             ),
           ),
           const SizedBox(height: 16),
@@ -560,7 +560,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
             icon: Icons.credit_card,
             title: 'Midtrans',
             subtitle: 'Bayar dengan kartu kredit/debit, e-wallet, dan lainnya',
-            color: AppTheme.primaryRed,
+            color: AppTheme.primaryBlue,
             onTap: () {
               setState(() {
                 _selectedPaymentMethod = 'midtrans';
@@ -682,7 +682,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                     const Icon(
                       Icons.qr_code_scanner,
                       size: 48,
-                      color: AppTheme.primaryRed,
+                      color: AppTheme.primaryBlue,
                     ),
                     const SizedBox(height: 12),
                     const Text(
@@ -690,7 +690,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
-                        color: AppTheme.darkRed,
+                        color: AppTheme.darkBlue,
                       ),
                       textAlign: TextAlign.center,
                     ),
@@ -701,12 +701,12 @@ class _PaymentScreenState extends State<PaymentScreen> {
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
-                          color: AppTheme.primaryRed,
+                          color: AppTheme.primaryBlue,
                           width: 3,
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: AppTheme.primaryRed.withOpacity(0.2),
+                            color: AppTheme.primaryBlue.withOpacity(0.2),
                             blurRadius: 10,
                             spreadRadius: 2,
                           ),
@@ -722,7 +722,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: AppTheme.primaryYellow,
+                        color: AppTheme.accentBlue,
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Column(
@@ -731,7 +731,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                             'Total Pembayaran',
                             style: TextStyle(
                               fontSize: 14,
-                              color: AppTheme.darkRed,
+                              color: AppTheme.darkBlue,
                             ),
                           ),
                           const SizedBox(height: 4),
@@ -740,7 +740,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                             style: const TextStyle(
                               fontSize: 32,
                               fontWeight: FontWeight.bold,
-                              color: AppTheme.darkRed,
+                              color: AppTheme.darkBlue,
                             ),
                           ),
                         ],
@@ -757,7 +757,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
             ),
             const SizedBox(height: 20),
             Card(
-              color: AppTheme.primaryRed,
+              color: AppTheme.primaryBlue,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -795,7 +795,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: AppTheme.darkRed,
+                  color: AppTheme.darkBlue,
                 ),
               ),
             ),
@@ -826,7 +826,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                       ),
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
-                        color: AppTheme.primaryRed,
+                        color: AppTheme.primaryBlue,
                         fontSize: 16,
                       ),
                     ),
@@ -865,7 +865,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                   const Icon(
                     Icons.payment,
                     size: 64,
-                    color: AppTheme.primaryRed,
+                    color: AppTheme.primaryBlue,
                   ),
                   const SizedBox(height: 16),
                   const Text(
@@ -873,7 +873,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
-                      color: AppTheme.darkRed,
+                      color: AppTheme.darkBlue,
                     ),
                     textAlign: TextAlign.center,
                   ),
@@ -887,7 +887,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: AppTheme.primaryYellow,
+                      color: AppTheme.accentBlue,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Column(
@@ -896,7 +896,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                           'Total Pembayaran',
                           style: TextStyle(
                             fontSize: 14,
-                            color: AppTheme.darkRed,
+                            color: AppTheme.darkBlue,
                           ),
                         ),
                         const SizedBox(height: 4),
@@ -905,7 +905,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                           style: const TextStyle(
                             fontSize: 32,
                             fontWeight: FontWeight.bold,
-                            color: AppTheme.darkRed,
+                            color: AppTheme.darkBlue,
                           ),
                         ),
                       ],
@@ -922,7 +922,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
           ),
           const SizedBox(height: 20),
           Card(
-            color: AppTheme.primaryRed,
+            color: AppTheme.primaryBlue,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
             ),

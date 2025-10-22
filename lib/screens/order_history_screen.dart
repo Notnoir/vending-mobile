@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../models/order.dart';
 import '../services/order_service.dart';
 import '../utils/helpers.dart';
@@ -46,7 +46,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
   Color _getStatusColor(String status) {
     switch (status.toLowerCase()) {
       case 'pending':
-        return AppTheme.primaryYellow;
+        return AppTheme.accentBlue;
       case 'settlement':
       case 'success':
       case 'completed':
@@ -55,7 +55,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
       case 'cancel':
       case 'deny':
       case 'expire':
-        return AppTheme.primaryRed;
+        return AppTheme.primaryBlue;
       default:
         return Colors.grey;
     }
@@ -91,13 +91,13 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
           'Riwayat Pesanan',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
-        backgroundColor: AppTheme.primaryRed,
+        backgroundColor: AppTheme.primaryBlue,
         foregroundColor: Colors.white,
         elevation: 0,
         flexibleSpace: Container(
           decoration: const BoxDecoration(
             gradient: LinearGradient(
-              colors: [AppTheme.primaryRed, AppTheme.darkRed],
+              colors: [AppTheme.primaryBlue, AppTheme.darkBlue],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -117,7 +117,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
         ),
         child: _isLoading
             ? const Center(
-                child: CircularProgressIndicator(color: AppTheme.primaryRed),
+                child: CircularProgressIndicator(color: AppTheme.primaryBlue),
               )
             : _errorMessage != null
             ? Center(
@@ -127,20 +127,20 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
                     const Icon(
                       Icons.error_outline,
                       size: 60,
-                      color: AppTheme.primaryRed,
+                      color: AppTheme.primaryBlue,
                     ),
                     const SizedBox(height: 16),
                     Text(
                       'Error: $_errorMessage',
                       textAlign: TextAlign.center,
-                      style: const TextStyle(color: AppTheme.primaryRed),
+                      style: const TextStyle(color: AppTheme.primaryBlue),
                     ),
                     const SizedBox(height: 16),
                     ElevatedButton(
                       onPressed: _loadOrders,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.primaryYellow,
-                        foregroundColor: AppTheme.darkRed,
+                        backgroundColor: AppTheme.accentBlue,
+                        foregroundColor: AppTheme.darkBlue,
                       ),
                       child: const Text('Coba Lagi'),
                     ),
@@ -155,7 +155,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
                     Icon(
                       Icons.receipt_long,
                       size: 100,
-                      color: AppTheme.primaryRed,
+                      color: AppTheme.primaryBlue,
                     ),
                     SizedBox(height: 16),
                     Text(
@@ -163,7 +163,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
                       style: TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
-                        color: AppTheme.primaryRed,
+                        color: AppTheme.primaryBlue,
                       ),
                     ),
                   ],
@@ -171,7 +171,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
               )
             : RefreshIndicator(
                 onRefresh: _loadOrders,
-                color: AppTheme.primaryRed,
+                color: AppTheme.primaryBlue,
                 child: ListView.builder(
                   padding: const EdgeInsets.all(16),
                   itemCount: _orders.length,
@@ -191,7 +191,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
                           'Order #${order.id}',
                           style: const TextStyle(
                             fontWeight: FontWeight.bold,
-                            color: AppTheme.darkRed,
+                            color: AppTheme.darkBlue,
                           ),
                         ),
                         subtitle: Column(
@@ -228,7 +228,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
                           style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 18,
-                            color: AppTheme.primaryRed,
+                            color: AppTheme.primaryBlue,
                           ),
                         ),
                         children: [
@@ -243,7 +243,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
                                   style: TextStyle(
                                     fontWeight: FontWeight.bold,
                                     fontSize: 16,
-                                    color: AppTheme.darkRed,
+                                    color: AppTheme.darkBlue,
                                   ),
                                 ),
                                 const SizedBox(height: 12),
@@ -290,7 +290,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
                                       style: const TextStyle(
                                         fontWeight: FontWeight.bold,
                                         fontSize: 18,
-                                        color: AppTheme.primaryRed,
+                                        color: AppTheme.primaryBlue,
                                       ),
                                     ),
                                   ],

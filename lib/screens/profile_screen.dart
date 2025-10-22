@@ -12,13 +12,13 @@ class ProfileScreen extends StatelessWidget {
           'Profil',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
-        backgroundColor: AppTheme.primaryRed,
+        backgroundColor: AppTheme.primaryBlue,
         foregroundColor: Colors.white,
         elevation: 0,
         flexibleSpace: Container(
           decoration: const BoxDecoration(
             gradient: LinearGradient(
-              colors: [AppTheme.primaryRed, AppTheme.darkRed],
+              colors: [AppTheme.primaryBlue, AppTheme.darkBlue],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -46,7 +46,7 @@ class ProfileScreen extends StatelessWidget {
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(12),
                   gradient: const LinearGradient(
-                    colors: [AppTheme.primaryRed, AppTheme.darkRed],
+                    colors: [AppTheme.primaryBlue, AppTheme.darkBlue],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
@@ -56,11 +56,11 @@ class ProfileScreen extends StatelessWidget {
                   children: [
                     CircleAvatar(
                       radius: 50,
-                      backgroundColor: AppTheme.primaryYellow,
+                      backgroundColor: AppTheme.accentBlue,
                       child: Icon(
                         Icons.person,
                         size: 60,
-                        color: AppTheme.darkRed,
+                        color: AppTheme.darkBlue,
                       ),
                     ),
                     SizedBox(height: 16),
@@ -89,7 +89,7 @@ class ProfileScreen extends StatelessWidget {
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: AppTheme.darkRed,
+                color: AppTheme.darkBlue,
               ),
             ),
             const SizedBox(height: 12),
@@ -103,7 +103,7 @@ class ProfileScreen extends StatelessWidget {
                   ListTile(
                     leading: const Icon(
                       Icons.info_outline,
-                      color: AppTheme.primaryRed,
+                      color: AppTheme.primaryBlue,
                     ),
                     title: const Text('Versi Aplikasi'),
                     trailing: const Text(
@@ -116,12 +116,12 @@ class ProfileScreen extends StatelessWidget {
                   ListTile(
                     leading: const Icon(
                       Icons.privacy_tip_outlined,
-                      color: AppTheme.primaryRed,
+                      color: AppTheme.primaryBlue,
                     ),
                     title: const Text('Kebijakan Privasi'),
                     trailing: const Icon(
                       Icons.chevron_right,
-                      color: AppTheme.primaryRed,
+                      color: AppTheme.primaryBlue,
                     ),
                     onTap: () {
                       // TODO: Navigate to privacy policy
@@ -131,12 +131,12 @@ class ProfileScreen extends StatelessWidget {
                   ListTile(
                     leading: const Icon(
                       Icons.description_outlined,
-                      color: AppTheme.primaryRed,
+                      color: AppTheme.primaryBlue,
                     ),
                     title: const Text('Syarat & Ketentuan'),
                     trailing: const Icon(
                       Icons.chevron_right,
-                      color: AppTheme.primaryRed,
+                      color: AppTheme.primaryBlue,
                     ),
                     onTap: () {
                       // TODO: Navigate to terms
@@ -146,12 +146,12 @@ class ProfileScreen extends StatelessWidget {
                   ListTile(
                     leading: const Icon(
                       Icons.help_outline,
-                      color: AppTheme.primaryRed,
+                      color: AppTheme.primaryBlue,
                     ),
                     title: const Text('Bantuan'),
                     trailing: const Icon(
                       Icons.chevron_right,
-                      color: AppTheme.primaryRed,
+                      color: AppTheme.primaryBlue,
                     ),
                     onTap: () {
                       // TODO: Navigate to help
@@ -168,7 +168,7 @@ class ProfileScreen extends StatelessWidget {
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: AppTheme.darkRed,
+                color: AppTheme.darkBlue,
               ),
             ),
             const SizedBox(height: 12),
@@ -187,7 +187,7 @@ class ProfileScreen extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: AppTheme.darkRed,
+                        color: AppTheme.darkBlue,
                       ),
                     ),
                     SizedBox(height: 8),

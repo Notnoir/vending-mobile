@@ -70,7 +70,7 @@ class _SplashScreenState extends State<SplashScreen>
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            colors: [AppTheme.primaryRed, AppTheme.darkRed],
+            colors: [AppTheme.primaryBlue, AppTheme.darkBlue],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
           ),
@@ -83,7 +83,7 @@ class _SplashScreenState extends State<SplashScreen>
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // Logo Container with shadow
+                  // Logo Container with shadow - Healthcare Icon
                   Container(
                     padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
@@ -98,16 +98,16 @@ class _SplashScreenState extends State<SplashScreen>
                       ],
                     ),
                     child: const Icon(
-                      Icons.fastfood,
+                      Icons.local_hospital_rounded,
                       size: 100,
-                      color: AppTheme.primaryYellow,
+                      color: Colors.white,
                     ),
                   ),
                   const SizedBox(height: 32),
 
                   // App Name
                   const Text(
-                    'Vending Machine',
+                    'Health Vending',
                     style: TextStyle(
                       fontSize: 36,
                       fontWeight: FontWeight.bold,
@@ -126,10 +126,10 @@ class _SplashScreenState extends State<SplashScreen>
 
                   // Tagline
                   const Text(
-                    'Pesan Cepat, Bayar Mudah!',
+                    'Kesehatan dalam Genggaman',
                     style: TextStyle(
                       fontSize: 16,
-                      color: AppTheme.primaryYellow,
+                      color: Colors.white,
                       fontWeight: FontWeight.w500,
                       letterSpacing: 0.5,
                     ),
@@ -142,9 +142,7 @@ class _SplashScreenState extends State<SplashScreen>
                     height: 50,
                     child: CircularProgressIndicator(
                       strokeWidth: 3,
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        AppTheme.primaryYellow,
-                      ),
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                     ),
                   ),
                 ],

@@ -144,7 +144,7 @@ class McdProductCard extends StatelessWidget {
                         vertical: 3,
                       ),
                       decoration: BoxDecoration(
-                        color: AppTheme.primaryYellow.withOpacity(0.2),
+                        color: AppTheme.accentBlue.withOpacity(0.2),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
@@ -185,7 +185,7 @@ class McdProductCard extends StatelessWidget {
                             style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
-                              color: AppTheme.primaryRed,
+                              color: AppTheme.primaryBlue,
                             ),
                           ),
                         ),
@@ -196,11 +196,11 @@ class McdProductCard extends StatelessWidget {
                             height: 32,
                             width: 32,
                             decoration: BoxDecoration(
-                              color: AppTheme.primaryRed,
+                              color: AppTheme.primaryBlue,
                               borderRadius: BorderRadius.circular(16),
                               boxShadow: [
                                 BoxShadow(
-                                  color: AppTheme.primaryRed.withOpacity(0.3),
+                                  color: AppTheme.primaryBlue.withOpacity(0.3),
                                   blurRadius: 6,
                                   offset: const Offset(0, 2),
                                 ),
