@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'dart:async';
 import '../providers/cart_provider.dart';
 import '../services/payment_service.dart';
@@ -9,6 +8,7 @@ import '../models/payment.dart';
 import '../utils/helpers.dart';
 import '../theme/app_theme.dart';
 import 'home_screen.dart';
+import 'midtrans_webview_screen.dart';
 
 class PaymentScreen extends StatefulWidget {
   const PaymentScreen({super.key});
@@ -24,6 +24,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
   Timer? _statusTimer;
   String? _errorMessage;
   String? _selectedPaymentMethod; // null, 'qris', or 'midtrans'
+  bool _isCheckingStatus = false; // New flag for status checking feedback
 
   @override
   void initState() {
@@ -224,27 +225,69 @@ class _PaymentScreenState extends State<PaymentScreen> {
         _isLoading = false;
       });
 
-      // STEP 3: Open Midtrans payment URL
+      // STEP 3: Open Midtrans payment URL in WebView
       if (response.redirectUrl.isNotEmpty) {
-        print('🌐 Opening Midtrans URL: ${response.redirectUrl}');
+        print('🌐 Opening Midtrans WebView: ${response.redirectUrl}');
 
-        try {
-          final uri = Uri.parse(response.redirectUrl);
+        setState(() {
+          _payment = backendOrder; // Save payment info
+        });
 
-          // Launch URL directly without checking canLaunchUrl
-          // because canLaunchUrl may return false even when URL is valid
-          await launchUrl(uri, mode: LaunchMode.externalApplication);
+        // Navigate to WebView screen and wait for result
+        final result = await Navigator.push<String>(
+          context,
+          MaterialPageRoute(
+            builder: (context) => MidtransWebViewScreen(
+              paymentUrl: response.redirectUrl,
+              orderId: backendOrder.orderId,
+            ),
+          ),
+        );
 
-          // STEP 4: Save payment info and start polling
-          setState(() {
-            _payment = backendOrder; // Use the order from backend
-          });
-          _startStatusPolling();
-        } catch (launchError) {
-          print('❌ Error launching URL: $launchError');
-          throw Exception(
-            'Tidak dapat membuka halaman pembayaran: $launchError',
+        print('💳 Payment result: $result');
+
+        // Handle payment result
+        if (result == 'success') {
+          // SUCCESS: Manually update payment status in backend (webhook workaround)
+          print(
+            '✅ WebView detected success - triggering manual backend update...',
           );
+
+          setState(() {
+            _isCheckingStatus = true;
+          });
+
+          try {
+            final updated = await _paymentService.manualUpdatePaymentStatus(
+              backendOrder.orderId,
+              status: 'SUCCESS',
+            );
+
+            if (updated) {
+              print('✅ Backend payment status updated successfully');
+            } else {
+              print('⚠️ Manual update returned false, but continuing...');
+            }
+          } catch (e) {
+            print('⚠️ Manual update error (non-critical): $e');
+          }
+
+          // Small delay to let backend process the update
+          await Future.delayed(const Duration(seconds: 1));
+
+          // Start polling to verify and get final status
+          _startStatusPolling();
+        } else if (result == 'pending') {
+          // PENDING: Start polling without manual update
+          _startStatusPolling();
+        } else if (result == 'failed' || result == 'cancelled') {
+          setState(() {
+            _errorMessage = result == 'cancelled'
+                ? 'Pembayaran dibatalkan'
+                : 'Pembayaran gagal';
+            _selectedPaymentMethod = null;
+            _payment = null;
+          });
         }
       } else {
         throw Exception('No redirect URL received');
@@ -259,9 +302,37 @@ class _PaymentScreenState extends State<PaymentScreen> {
   }
 
   void _startStatusPolling() {
+    int pollCount = 0;
+    const maxPolls = 40; // 40 * 3s = 2 minutes max polling
+
+    // Show checking status indicator
+    setState(() {
+      _isCheckingStatus = true;
+    });
+
     _statusTimer = Timer.periodic(const Duration(seconds: 3), (timer) async {
       if (_payment == null) {
         timer.cancel();
+        setState(() {
+          _isCheckingStatus = false;
+        });
+        return;
+      }
+
+      pollCount++;
+      print('🔄 Polling payment status... (attempt $pollCount/$maxPolls)');
+
+      // Stop after max attempts
+      if (pollCount >= maxPolls) {
+        print('⏰ Max polling attempts reached');
+        timer.cancel();
+        if (mounted) {
+          setState(() {
+            _isCheckingStatus = false;
+            _errorMessage =
+                'Timeout: Tidak dapat memverifikasi status pembayaran. Cek riwayat pesanan.';
+          });
+        }
         return;
       }
 
@@ -270,17 +341,39 @@ class _PaymentScreenState extends State<PaymentScreen> {
           _payment!.orderId,
         );
 
-        if (status == 'settlement' || status == 'capture') {
+        print('💳 Current payment status: $status');
+
+        // Success statuses
+        if (status == 'settlement' ||
+            status == 'capture' ||
+            status == 'success') {
+          print('✅ Payment successful!');
           timer.cancel();
+          setState(() {
+            _isCheckingStatus = false;
+          });
           _handlePaymentSuccess();
-        } else if (status == 'deny' ||
+        }
+        // Failed statuses
+        else if (status == 'deny' ||
             status == 'cancel' ||
-            status == 'expire') {
+            status == 'expire' ||
+            status == 'failure') {
+          print('❌ Payment failed: $status');
           timer.cancel();
+          setState(() {
+            _isCheckingStatus = false;
+          });
           _handlePaymentFailed(status);
         }
+        // Pending statuses - continue polling
+        else if (status == 'pending' || status == 'challenge') {
+          print('⏳ Payment still pending, continuing to poll...');
+          // Continue polling
+        }
       } catch (e) {
-        // Continue polling on error
+        print('❌ Error polling payment status: $e');
+        // Continue polling on error - don't stop on network issues
       }
     });
   }
@@ -309,12 +402,12 @@ class _PaymentScreenState extends State<PaymentScreen> {
               Navigator.of(ctx).pop();
               Navigator.of(context).pushAndRemoveUntil(
                 MaterialPageRoute(
-                  builder: (context) => const HomeScreen(initialTabIndex: 2),
+                  builder: (context) => const HomeScreen(initialTabIndex: 0),
                 ),
                 (route) => false,
               );
             },
-            child: const Text('Lihat Riwayat'),
+            child: const Text('Kembali ke Beranda'),
           ),
         ],
       ),
@@ -358,8 +451,6 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final cartProvider = Provider.of<CartProvider>(context);
-
     return Scaffold(
       appBar: AppBar(
         title: const Text(
@@ -761,7 +852,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Padding(
+              child: Padding(
                 padding: EdgeInsets.all(16),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -776,7 +867,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
                     ),
                     SizedBox(width: 12),
                     Text(
-                      'Menunggu pembayaran...',
+                      _isCheckingStatus
+                          ? 'Mengecek status pembayaran...'
+                          : 'Menunggu pembayaran...',
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 16,

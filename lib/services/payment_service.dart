@@ -79,17 +79,32 @@ class PaymentService {
     }
   }
 
-  // Check payment status - returns String status (from backend order)
+  // Check payment status - returns String status (from Midtrans via frontend API)
   Future<String> checkPaymentStatus(String orderId) async {
     try {
-      // Get order status from backend
-      final response = await _apiService.get(ApiEndpoints.orderById(orderId));
+      print('🔍 Checking payment status for order: $orderId');
 
-      // Return status as lowercase to match mobile app expectations
-      final status = response['status']?.toString().toLowerCase() ?? 'pending';
-      return status;
+      // Get payment status from Midtrans via frontend API
+      final response = await _dio.get(ApiEndpoints.paymentStatus(orderId));
+
+      print('✅ Payment status response: ${response.data}');
+
+      // Extract transaction_status from Midtrans response
+      final transactionStatus =
+          response.data['transaction_status']?.toString().toLowerCase() ??
+          'pending';
+
+      print('💳 Midtrans transaction status: $transactionStatus');
+
+      return transactionStatus;
     } catch (e) {
-      print('Error checking payment status: $e');
+      if (e is DioException) {
+        print(
+          '❌ Error checking payment status: ${e.response?.statusCode} - ${e.response?.data}',
+        );
+      } else {
+        print('❌ Error checking payment status: $e');
+      }
       rethrow;
     }
   }
@@ -134,6 +149,33 @@ class PaymentService {
         await Future.delayed(interval);
         attempts++;
       }
+    }
+  }
+
+  // Manual update payment status (for when webhook doesn't reach backend)
+  Future<bool> manualUpdatePaymentStatus(
+    String orderId, {
+    String status = 'SUCCESS',
+  }) async {
+    try {
+      print('🔧 Manually updating payment status for: $orderId → $status');
+
+      final response = await _dio.post(
+        '${ApiConfig.baseUrl}/api/debug/update-payment/$orderId',
+        data: {'status': status},
+      );
+
+      print('✅ Manual update response: ${response.data}');
+      return response.data['success'] == true;
+    } catch (e) {
+      if (e is DioException) {
+        print(
+          '❌ Error manual update: ${e.response?.statusCode} - ${e.response?.data}',
+        );
+      } else {
+        print('❌ Error manual update: $e');
+      }
+      return false;
     }
   }
 

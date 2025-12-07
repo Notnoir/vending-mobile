@@ -50,6 +50,7 @@ dependencies:
   # QR & Payment
   qr_flutter: ^4.1.0
   mobile_scanner: ^3.5.5
+  webview_flutter: ^4.10.0
 
   # Storage
   shared_preferences: ^2.2.2
