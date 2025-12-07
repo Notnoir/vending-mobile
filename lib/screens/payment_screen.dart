@@ -4,6 +4,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 import 'dart:async';
 import '../providers/cart_provider.dart';
 import '../services/payment_service.dart';
+import '../services/mqtt_service.dart';
 import '../models/payment.dart';
 import '../utils/helpers.dart';
 import '../theme/app_theme.dart';
@@ -19,22 +20,61 @@ class PaymentScreen extends StatefulWidget {
 
 class _PaymentScreenState extends State<PaymentScreen> {
   final PaymentService _paymentService = PaymentService();
+  final MqttService _mqttService = MqttService();
   bool _isLoading = false;
   Payment? _payment;
   Timer? _statusTimer;
   String? _errorMessage;
   String? _selectedPaymentMethod; // null, 'qris', or 'midtrans'
   bool _isCheckingStatus = false; // New flag for status checking feedback
+  StreamSubscription? _dispenseResultSubscription;
 
   @override
   void initState() {
     super.initState();
     // Don't create payment immediately, wait for payment method selection
+    _initMqtt();
+  }
+
+  Future<void> _initMqtt() async {
+    print('🔌 Initializing MQTT connection...');
+    final connected = await _mqttService.connect();
+    if (connected) {
+      print('✅ MQTT connected successfully');
+      _setupMqttListeners();
+    } else {
+      print('⚠️ MQTT connection failed - dispense may not work');
+    }
+  }
+
+  void _setupMqttListeners() {
+    // Listen for dispense results
+    _dispenseResultSubscription = _mqttService.dispenseResultStream.listen(
+      (result) {
+        print('📦 Dispense result received: $result');
+        final success = result['success'] as bool? ?? false;
+        final orderId = result['orderId'] as String?;
+        
+        if (orderId == _payment?.orderId) {
+          if (success) {
+            print('✅ Product dispensed successfully!');
+            // Show success in UI if needed
+          } else {
+            print('❌ Dispense failed: ${result['error']}');
+            // Show error in UI if needed
+          }
+        }
+      },
+      onError: (error) {
+        print('❌ Dispense stream error: $error');
+      },
+    );
   }
 
   @override
   void dispose() {
     _statusTimer?.cancel();
+    _dispenseResultSubscription?.cancel();
     super.dispose();
   }
 
@@ -378,8 +418,50 @@ class _PaymentScreenState extends State<PaymentScreen> {
     });
   }
 
+  void _triggerDispense() {
+    if (_payment == null) {
+      print('⚠️ Cannot trigger dispense - no payment info');
+      return;
+    }
+
+    // Get slot number from payment
+    // Assuming payment has slot_id or we can get it from cart
+    final cartProvider = Provider.of<CartProvider>(context, listen: false);
+    if (cartProvider.items.isEmpty) {
+      print('⚠️ Cannot trigger dispense - cart is empty');
+      return;
+    }
+
+    final firstItem = cartProvider.items.first;
+    final slotId = firstItem.product.slotId;
+
+    if (slotId == null) {
+      print('⚠️ Cannot trigger dispense - no slot ID');
+      return;
+    }
+
+    print('📤 Triggering MQTT dispense command...');
+    print('   Order ID: ${_payment!.orderId}');
+    print('   Slot: $slotId');
+
+    final published = _mqttService.publishDispenseCommand(
+      orderId: _payment!.orderId,
+      slot: slotId,
+    );
+
+    if (published) {
+      print('✅ Dispense command published via MQTT');
+    } else {
+      print('❌ Failed to publish dispense command');
+    }
+  }
+
   void _handlePaymentSuccess() {
     final cartProvider = Provider.of<CartProvider>(context, listen: false);
+    
+    // Trigger MQTT dispense command
+    _triggerDispense();
+    
     cartProvider.clear();
 
     if (!mounted) return;

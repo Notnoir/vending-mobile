@@ -161,7 +161,7 @@ class PaymentService {
       print('🔧 Manually updating payment status for: $orderId → $status');
 
       final response = await _dio.post(
-        '${ApiConfig.baseUrl}/api/debug/update-payment/$orderId',
+        '${ApiConfig.baseUrl}/debug/update-payment/$orderId',
         data: {'status': status},
       );
 

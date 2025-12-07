@@ -41,6 +41,7 @@ dependencies:
   # HTTP & Networking
   http: ^1.2.0
   dio: ^5.4.0
+  mqtt_client: ^10.2.0
 
   # UI Components
   cached_network_image: ^3.3.0
