@@ -1,19 +1,22 @@
 import 'package:flutter/material.dart';
 
 class AppTheme {
-  // Healthcare/Hospital inspired colors - Modern Blue & White Theme
-  static const Color primaryBlue = Color(0xFF0066CC); // Trust Blue
-  static const Color darkBlue = Color(0xFF004A99); // Deep Blue
-  static const Color lightBlue = Color(0xFF3399FF); // Bright Blue
-  static const Color accentBlue = Color(0xFF00B4D8); // Sky Blue
-  static const Color softBlue = Color(0xFFE6F3FF); // Soft Blue Background
+  // Modern Teal/Turquoise Theme (Healthcare inspired)
+  static const Color primary = Color(0xFF4FD1C5); // Teal Primary
+  static const Color primaryBlue = Color(0xFF4FD1C5); // Alias for compatibility
+  static const Color darkBlue = Color(0xFF38B2AC); // Darker Teal
+  static const Color lightBlue = Color(0xFF81E6D9); // Lighter Teal
+  static const Color accentBlue = Color(0xFFA8D8F0); // Secondary Light Blue
+  static const Color softBlue = Color(0xFFE6FFFA); // Soft Teal Background
 
   // Neutral colors - Clean & Professional
-  static const Color backgroundColor = Color(0xFFF0F7FF); // Light Blue Tint
-  static const Color cardColor = Color(0xFFFFFFFF); // Pure White
-  static const Color textPrimary = Color(0xFF1A1A2E); // Dark Blue-Black
-  static const Color textSecondary = Color(0xFF6B7280); // Gray
-  static const Color dividerColor = Color(0xFFE0E7FF); // Light Blue Divider
+  static const Color backgroundColor = Color(
+    0xFFF8F9FA,
+  ); // Light Gray Background
+  static const Color cardColor = Color(0xFFFFFFFF); // Pure White Cards
+  static const Color textPrimary = Color(0xFF4A5568); // Gray 700
+  static const Color textSecondary = Color(0xFFA0AEC0); // Gray 400
+  static const Color dividerColor = Color(0xFFE2E8F0); // Gray 200
 
   // Status colors
   static const Color successGreen = Color(0xFF10B981); // Modern Green

@@ -12,21 +12,18 @@ class CartScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppTheme.backgroundColor,
       appBar: AppBar(
-        title: const Text(
-          'Keranjang',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        backgroundColor: AppTheme.primaryBlue,
-        foregroundColor: Colors.white,
+        backgroundColor: AppTheme.backgroundColor,
         elevation: 0,
-        flexibleSpace: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [AppTheme.primaryBlue, AppTheme.darkBlue],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
+        centerTitle: true,
+        automaticallyImplyLeading: false,
+        title: const Text(
+          'Keranjang Belanja',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: AppTheme.textPrimary,
           ),
         ),
         actions: [
@@ -85,47 +82,44 @@ class CartScreen extends StatelessWidget {
       body: Consumer<CartProvider>(
         builder: (context, cart, child) {
           if (cart.items.isEmpty) {
-            return Container(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Color(0xFFFFF5F5), Colors.white],
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                ),
-              ),
-              child: const Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.shopping_cart_outlined,
-                      size: 100,
-                      color: AppTheme.primaryBlue,
+            return const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.shopping_cart_outlined,
+                    size: 100,
+                    color: AppTheme.textSecondary,
+                  ),
+                  SizedBox(height: 16),
+                  Text(
+                    'Keranjang Kosong',
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.textPrimary,
                     ),
-                    SizedBox(height: 16),
-                    Text(
-                      'Keranjang Kosong',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: AppTheme.primaryBlue,
-                      ),
+                  ),
+                  SizedBox(height: 8),
+                  Text(
+                    'Tambahkan produk untuk melanjutkan',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: AppTheme.textSecondary,
                     ),
-                    SizedBox(height: 8),
-                    Text(
-                      'Tambahkan produk untuk melanjutkan',
-                      style: TextStyle(fontSize: 16, color: Colors.grey),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             );
           }
 
-          return Column(
+          return Stack(
             children: [
-              Expanded(
+              // Cart items list
+              Padding(
+                padding: const EdgeInsets.only(bottom: 220),
                 child: ListView.builder(
+                  padding: const EdgeInsets.all(16),
                   itemCount: cart.items.length,
                   itemBuilder: (context, index) {
                     final item = cart.items[index];
@@ -172,105 +166,77 @@ class CartScreen extends StatelessWidget {
                   },
                 ),
               ),
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(24),
-                    topRight: Radius.circular(24),
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      spreadRadius: 0,
-                      blurRadius: 10,
-                      offset: const Offset(0, -5),
+
+              // Fixed bottom summary
+              Positioned(
+                bottom: 96,
+                left: 0,
+                right: 0,
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.95),
+                    border: const Border(
+                      top: BorderSide(color: Color(0xFFE2E8F0), width: 1),
                     ),
-                  ],
-                ),
-                child: Column(
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'Total Item:',
-                          style: TextStyle(fontSize: 16),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 4,
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'Total',
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: AppTheme.textSecondary,
+                            ),
                           ),
-                          decoration: BoxDecoration(
-                            color: AppTheme.softBlue,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            '${cart.totalItems} item',
+                          Text(
+                            Helpers.formatCurrency(cart.totalPrice),
                             style: const TextStyle(
+                              fontSize: 28,
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.textPrimary,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 56,
+                        child: ElevatedButton(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const PaymentScreen(),
+                              ),
+                            );
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.primary,
+                            foregroundColor: Colors.white,
+                            elevation: 8,
+                            shadowColor: AppTheme.primary.withOpacity(0.3),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(9999),
+                            ),
+                          ),
+                          child: const Text(
+                            'Lanjut ke Pembayaran',
+                            style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
-                              color: AppTheme.primaryBlue,
+                              color: Colors.white,
                             ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'Total Harga:',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        Text(
-                          Helpers.formatCurrency(cart.totalPrice),
-                          style: const TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: AppTheme.primaryBlue,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 56,
-                      child: ElevatedButton(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const PaymentScreen(),
-                            ),
-                          );
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppTheme.primaryBlue,
-                          foregroundColor: Colors.white,
-                          elevation: 4,
-                          shadowColor: AppTheme.primaryBlue.withOpacity(0.5),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        child: const Text(
-                          'Lanjut ke Pembayaran',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
                           ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ],

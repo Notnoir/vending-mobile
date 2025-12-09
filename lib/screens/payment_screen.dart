@@ -54,7 +54,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
         print('📦 Dispense result received: $result');
         final success = result['success'] as bool? ?? false;
         final orderId = result['orderId'] as String?;
-        
+
         if (orderId == _payment?.orderId) {
           if (success) {
             print('✅ Product dispensed successfully!');
@@ -458,40 +458,20 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
   void _handlePaymentSuccess() {
     final cartProvider = Provider.of<CartProvider>(context, listen: false);
-    
+
     // Trigger MQTT dispense command
     _triggerDispense();
-    
-    cartProvider.clear();
 
     if (!mounted) return;
 
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        title: const Row(
-          children: [
-            Icon(Icons.check_circle, color: Colors.green, size: 32),
-            SizedBox(width: 8),
-            Text('Pembayaran Berhasil'),
-          ],
+    // Navigate to dispensing screen
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(
+        builder: (context) => _DispensingScreen(
+          orderId: _payment!.orderId,
+          cartProvider: cartProvider,
+          mqttService: _mqttService,
         ),
-        content: const Text('Terima kasih! Pembayaran Anda telah berhasil.'),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.of(ctx).pop();
-              Navigator.of(context).pushAndRemoveUntil(
-                MaterialPageRoute(
-                  builder: (context) => const HomeScreen(initialTabIndex: 0),
-                ),
-                (route) => false,
-              );
-            },
-            child: const Text('Kembali ke Beranda'),
-          ),
-        ],
       ),
     );
   }
@@ -534,292 +514,485 @@ class _PaymentScreenState extends State<PaymentScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppTheme.backgroundColor,
       appBar: AppBar(
-        title: const Text(
-          'Pembayaran',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        backgroundColor: AppTheme.primaryBlue,
-        foregroundColor: Colors.white,
+        backgroundColor: AppTheme.backgroundColor,
         elevation: 0,
-        flexibleSpace: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [AppTheme.primaryBlue, AppTheme.darkBlue],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
+        centerTitle: true,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: AppTheme.textPrimary),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        title: const Text(
+          'Checkout',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: AppTheme.textPrimary,
           ),
         ),
       ),
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFFFFF5F5), Colors.white],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-        ),
-        child: _isLoading
-            ? const Center(
-                child: CircularProgressIndicator(color: AppTheme.primaryBlue),
-              )
-            : _errorMessage != null
-            ? Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(
-                      Icons.error_outline,
-                      size: 60,
-                      color: AppTheme.primaryBlue,
-                    ),
-                    const SizedBox(height: 16),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 32),
-                      child: Text(
-                        _errorMessage!,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          color: AppTheme.primaryBlue,
-                          fontSize: 16,
-                        ),
+      body: _isLoading
+          ? const Center(
+              child: CircularProgressIndicator(color: AppTheme.primary),
+            )
+          : _errorMessage != null
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.error_outline,
+                    size: 60,
+                    color: AppTheme.primary,
+                  ),
+                  const SizedBox(height: 16),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 32),
+                    child: Text(
+                      _errorMessage!,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: AppTheme.textPrimary,
+                        fontSize: 16,
                       ),
                     ),
-                    const SizedBox(height: 24),
-                    ElevatedButton(
-                      onPressed: () {
-                        setState(() {
-                          _errorMessage = null;
-                          _selectedPaymentMethod = null;
-                        });
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.accentBlue,
-                        foregroundColor: AppTheme.darkBlue,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 32,
-                          vertical: 16,
-                        ),
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton(
+                    onPressed: () {
+                      setState(() {
+                        _errorMessage = null;
+                        _selectedPaymentMethod = null;
+                      });
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 32,
+                        vertical: 16,
                       ),
-                      child: const Text(
-                        'Coba Lagi',
-                        style: TextStyle(fontWeight: FontWeight.bold),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(9999),
                       ),
                     ),
-                  ],
-                ),
-              )
-            : _selectedPaymentMethod == null
-            ? _buildPaymentMethodSelection()
-            : _payment == null
-            ? const Center(
-                child: CircularProgressIndicator(color: AppTheme.primaryBlue),
-              )
-            : _buildPaymentDetails(),
-      ),
+                    child: const Text(
+                      'Coba Lagi',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ],
+              ),
+            )
+          : _payment == null
+          ? _buildPaymentMethodSelection()
+          : _buildPaymentDetails(),
     );
   }
 
   Widget _buildPaymentMethodSelection() {
     final cartProvider = Provider.of<CartProvider>(context);
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Order Summary Card
-          Card(
-            elevation: 4,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
-                gradient: const LinearGradient(
-                  colors: [Colors.white, Color(0xFFFFF5F5)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
+    return Stack(
+      children: [
+        SingleChildScrollView(
+          padding: const EdgeInsets.only(bottom: 140),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Order Summary Section
+              const Padding(
+                padding: EdgeInsets.fromLTRB(16, 20, 16, 12),
+                child: Text(
+                  'Pesanan Anda',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.textPrimary,
+                  ),
                 ),
               ),
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Row(
+
+              // Order Items List
+              ...cartProvider.items.map((item) {
+                return Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                  decoration: const BoxDecoration(
+                    border: Border(
+                      bottom: BorderSide(color: Color(0xFFE2E8F0), width: 1),
+                    ),
+                  ),
+                  child: Row(
                     children: [
-                      Icon(Icons.shopping_cart, color: AppTheme.primaryBlue),
-                      SizedBox(width: 8),
+                      // Product Image
+                      Container(
+                        width: 56,
+                        height: 56,
+                        decoration: BoxDecoration(
+                          color: Colors.grey[100],
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child:
+                            (item.product.imageUrl != null &&
+                                item.product.imageUrl!.isNotEmpty)
+                            ? ClipRRect(
+                                borderRadius: BorderRadius.circular(12),
+                                child: Image.network(
+                                  Helpers.getImageUrl(item.product.imageUrl),
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return const Icon(
+                                      Icons.image_not_supported,
+                                      color: Colors.grey,
+                                    );
+                                  },
+                                ),
+                              )
+                            : const Icon(Icons.local_cafe, color: Colors.grey),
+                      ),
+                      const SizedBox(width: 16),
+                      // Product Info
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              item.product.name,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w500,
+                                color: AppTheme.textPrimary,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '${item.quantity}x',
+                              style: const TextStyle(
+                                fontSize: 14,
+                                color: AppTheme.textSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      // Price
                       Text(
-                        'Ringkasan Pesanan',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: AppTheme.darkBlue,
+                        Helpers.formatCurrency(
+                          item.product.price * item.quantity,
+                        ),
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                          color: AppTheme.textPrimary,
                         ),
                       ),
                     ],
                   ),
-                  const Divider(height: 24, color: AppTheme.accentBlue),
-                  ...cartProvider.items.map(
-                    (item) => Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 4),
-                      child: Row(
+                );
+              }).toList(),
+
+              // Cost Breakdown
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Expanded(
-                            child: Text(
-                              '${item.quantity}x ${item.product.name}',
-                              style: const TextStyle(fontSize: 14),
+                          const Text(
+                            'Subtotal',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: AppTheme.textSecondary,
                             ),
                           ),
                           Text(
-                            Helpers.formatCurrency(
-                              item.product.price * item.quantity,
-                            ),
+                            Helpers.formatCurrency(cartProvider.totalPrice),
                             style: const TextStyle(
-                              fontWeight: FontWeight.w600,
-                              color: AppTheme.darkBlue,
+                              fontSize: 14,
+                              color: AppTheme.textPrimary,
                             ),
                           ),
                         ],
                       ),
-                    ),
-                  ),
-                  const Divider(height: 24, color: AppTheme.accentBlue),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        'Total',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: AppTheme.darkBlue,
-                        ),
+                      const SizedBox(height: 12),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'Pajak & Biaya',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: AppTheme.textSecondary,
+                            ),
+                          ),
+                          Text(
+                            Helpers.formatCurrency(0),
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: AppTheme.textPrimary,
+                            ),
+                          ),
+                        ],
                       ),
-                      Text(
-                        Helpers.formatCurrency(cartProvider.totalPrice),
-                        style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: AppTheme.primaryBlue,
-                        ),
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 12),
+                        child: Divider(color: Color(0xFFE2E8F0)),
+                      ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'Total',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.textPrimary,
+                            ),
+                          ),
+                          Text(
+                            Helpers.formatCurrency(cartProvider.totalPrice),
+                            style: const TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.textPrimary,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 24),
-
-          // Payment Method Title
-          const Text(
-            'Pilih Metode Pembayaran',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: AppTheme.darkBlue,
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          // Midtrans Payment Method Card
-          _buildPaymentMethodCard(
-            method: 'midtrans',
-            icon: Icons.credit_card,
-            title: 'Midtrans',
-            subtitle: 'Bayar dengan kartu kredit/debit, e-wallet, dan lainnya',
-            color: AppTheme.primaryBlue,
-            onTap: () {
-              setState(() {
-                _selectedPaymentMethod = 'midtrans';
-              });
-              _createMidtransPayment();
-            },
-          ),
-          const SizedBox(height: 12),
-
-          // QRIS Payment Method Card
-          _buildPaymentMethodCard(
-            method: 'qris',
-            icon: Icons.qr_code_2,
-            title: 'QRIS',
-            subtitle: 'Bayar dengan scan QR code',
-            color: const Color(0xFF00AA13),
-            onTap: () {
-              setState(() {
-                _selectedPaymentMethod = 'qris';
-              });
-              _createQrisPayment();
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPaymentMethodCard({
-    required String method,
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            gradient: LinearGradient(
-              colors: [Colors.white, color.withOpacity(0.05)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          ),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
                 ),
-                child: Icon(icon, color: color, size: 32),
               ),
-              const SizedBox(width: 16),
-              Expanded(
+
+              // Payment Method Section
+              const Padding(
+                padding: EdgeInsets.fromLTRB(16, 16, 16, 12),
+                child: Text(
+                  'Pilih Metode Pembayaran',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.textPrimary,
+                  ),
+                ),
+              ),
+
+              // Payment Methods
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      title,
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: color,
-                      ),
+                    _buildModernPaymentOption(
+                      title: 'QRIS',
+                      logoPath: 'assets/images/qris-logo.png',
+                      isSelected: _selectedPaymentMethod == 'qris',
+                      onTap: () {
+                        setState(() {
+                          _selectedPaymentMethod = 'qris';
+                        });
+                      },
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      subtitle,
-                      style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+                    const SizedBox(height: 12),
+                    _buildModernPaymentOption(
+                      title: 'GoPay',
+                      logoPath: 'assets/images/gopay-logo.png',
+                      isSelected: _selectedPaymentMethod == 'gopay',
+                      onTap: () {
+                        setState(() {
+                          _selectedPaymentMethod = 'gopay';
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    _buildModernPaymentOption(
+                      title: 'ShopeePay',
+                      logoPath: 'assets/images/shopeepay-logo.png',
+                      isSelected: _selectedPaymentMethod == 'shopeepay',
+                      onTap: () {
+                        setState(() {
+                          _selectedPaymentMethod = 'shopeepay';
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    _buildModernPaymentOption(
+                      title: 'Transfer Bank',
+                      logoPath: 'assets/images/bank-logo.jpg',
+                      isSelected: _selectedPaymentMethod == 'bank',
+                      onTap: () {
+                        setState(() {
+                          _selectedPaymentMethod = 'bank';
+                        });
+                      },
                     ),
                   ],
                 ),
               ),
-              Icon(Icons.arrow_forward_ios, color: color, size: 20),
             ],
           ),
+        ),
+
+        // Fixed Bottom Bar
+        Positioned(
+          bottom: 0,
+          left: 0,
+          right: 0,
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: const BoxDecoration(
+              color: AppTheme.backgroundColor,
+              border: Border(
+                top: BorderSide(color: Color(0xFFE2E8F0), width: 1),
+              ),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: ElevatedButton(
+                    onPressed: _selectedPaymentMethod == null
+                        ? null
+                        : () {
+                            if (_selectedPaymentMethod == 'qris') {
+                              _createQrisPayment();
+                            } else {
+                              _createMidtransPayment();
+                            }
+                          },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primary,
+                      disabledBackgroundColor: AppTheme.textSecondary,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(9999),
+                      ),
+                    ),
+                    child: const Text(
+                      'Konfirmasi',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: const [
+                    Icon(Icons.lock, size: 14, color: AppTheme.textSecondary),
+                    SizedBox(width: 8),
+                    Text(
+                      'Pembayaran Aman',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppTheme.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildModernPaymentOption({
+    required String title,
+    String? logoPath,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: isSelected ? AppTheme.primary.withOpacity(0.1) : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? AppTheme.primary : const Color(0xFFE2E8F0),
+            width: isSelected ? 2 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            if (logoPath != null)
+              Container(
+                width: 40,
+                height: 24,
+                child: Image.asset(
+                  logoPath,
+                  fit: BoxFit.contain,
+                  errorBuilder: (context, error, stackTrace) {
+                    return Container(
+                      width: 24,
+                      height: 24,
+                      decoration: BoxDecoration(
+                        color: AppTheme.primary.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    );
+                  },
+                ),
+              )
+            else
+              Container(
+                width: 24,
+                height: 24,
+                decoration: BoxDecoration(
+                  color: AppTheme.primary.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                  color: AppTheme.textPrimary,
+                ),
+              ),
+            ),
+            Container(
+              width: 20,
+              height: 20,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: isSelected
+                      ? AppTheme.primary
+                      : const Color(0xFFCBD5E0),
+                  width: 2,
+                ),
+                color: isSelected ? AppTheme.primary : Colors.transparent,
+              ),
+              child: isSelected
+                  ? const Icon(Icons.check, size: 14, color: Colors.white)
+                  : null,
+            ),
+          ],
         ),
       ),
     );
@@ -1014,116 +1187,658 @@ class _PaymentScreenState extends State<PaymentScreen> {
       );
     }
 
-    // For Midtrans, show waiting message
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+    // For Midtrans, show waiting message with modern design
+    return Container(
+      color: AppTheme.backgroundColor,
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Card(
-            elevation: 4,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
-                gradient: const LinearGradient(
-                  colors: [Colors.white, Color(0xFFFFF5F5)],
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
+          Expanded(
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // Animated EKG Line
+                    const _EKGAnimation(),
+                    const SizedBox(height: 48),
+                    // Status Title
+                    const Text(
+                      'Memverifikasi Pembayaran',
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.textPrimary,
+                        letterSpacing: -0.5,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 12),
+                    // Status Description
+                    const Text(
+                      'Transaksi Anda sedang diproses dengan aman.\nIni hanya akan memakan waktu sebentar.',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: AppTheme.textSecondary,
+                        height: 1.5,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
                 ),
-              ),
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                children: [
-                  const Icon(
-                    Icons.payment,
-                    size: 64,
-                    color: AppTheme.primaryBlue,
-                  ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'Menunggu Pembayaran',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: AppTheme.darkBlue,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 12),
-                  const Text(
-                    'Silakan selesaikan pembayaran di halaman Midtrans yang telah dibuka',
-                    style: TextStyle(fontSize: 14, color: Colors.grey),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 24),
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: AppTheme.accentBlue,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Column(
-                      children: [
-                        const Text(
-                          'Total Pembayaran',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: AppTheme.darkBlue,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          Helpers.formatCurrency(_payment!.amount),
-                          style: const TextStyle(
-                            fontSize: 32,
-                            fontWeight: FontWeight.bold,
-                            color: AppTheme.darkBlue,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'Order ID: ${_payment!.orderId}',
-                    style: const TextStyle(fontSize: 12, color: Colors.grey),
-                  ),
-                ],
               ),
             ),
           ),
-          const SizedBox(height: 20),
-          Card(
-            color: AppTheme.primaryBlue,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+          // Bottom Section
+          Padding(
+            padding: const EdgeInsets.only(bottom: 32, top: 16),
+            child: Column(
+              children: [
+                // Security Badge
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: const [
+                    Icon(
+                      Icons.lock_outline,
+                      size: 18,
+                      color: AppTheme.textSecondary,
+                    ),
+                    SizedBox(width: 8),
+                    Text(
+                      'Terenkripsi SSL',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: AppTheme.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                // Cancel Button
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: TextButton(
+                      onPressed: () {
+                        _statusTimer?.cancel();
+                        Navigator.of(context).pop();
+                      },
+                      style: TextButton.styleFrom(
+                        backgroundColor: Colors.transparent,
+                        foregroundColor: AppTheme.textPrimary,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text(
+                        'Batal',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
-            child: const Padding(
-              padding: EdgeInsets.all(16),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Colors.white,
-                    ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// Animated EKG Widget
+class _EKGAnimation extends StatefulWidget {
+  const _EKGAnimation({Key? key}) : super(key: key);
+
+  @override
+  State<_EKGAnimation> createState() => _EKGAnimationState();
+}
+
+class _EKGAnimationState extends State<_EKGAnimation>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 2000),
+      vsync: this,
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return SizedBox(
+          width: 250,
+          height: 80,
+          child: CustomPaint(
+            painter: _EKGPainter(
+              progress: _controller.value,
+              color: AppTheme.primary,
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+// Custom painter for EKG-style animation
+class _EKGPainter extends CustomPainter {
+  final double progress;
+  final Color color;
+
+  _EKGPainter({required this.progress, required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 3
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round
+      ..style = PaintingStyle.stroke;
+
+    final path = Path();
+    final width = size.width;
+    final height = size.height;
+    final centerY = height / 2;
+
+    // EKG pattern points
+    final points = [
+      Offset(0, centerY),
+      Offset(width * 0.2, centerY),
+      Offset(width * 0.25, centerY - 20),
+      Offset(width * 0.3, centerY + 30),
+      Offset(width * 0.35, centerY - 5),
+      Offset(width * 0.4, centerY),
+      Offset(width * 0.5, centerY),
+      Offset(width * 0.55, centerY + 10),
+      Offset(width * 0.6, centerY - 10),
+      Offset(width * 0.65, centerY),
+      Offset(width, centerY),
+    ];
+
+    // Calculate visible portion based on progress
+    final totalLength = points.length - 1;
+    final visibleLength = totalLength * progress;
+    final visiblePoints = visibleLength.floor();
+
+    if (visiblePoints > 0) {
+      path.moveTo(points[0].dx, points[0].dy);
+      for (int i = 1; i <= visiblePoints && i < points.length; i++) {
+        path.lineTo(points[i].dx, points[i].dy);
+      }
+
+      // Partial segment for smooth animation
+      if (visiblePoints < points.length - 1) {
+        final fraction = visibleLength - visiblePoints;
+        final prev = points[visiblePoints];
+        final next = points[visiblePoints + 1];
+        final partial = Offset(
+          prev.dx + (next.dx - prev.dx) * fraction,
+          prev.dy + (next.dy - prev.dy) * fraction,
+        );
+        path.lineTo(partial.dx, partial.dy);
+      }
+    }
+
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(_EKGPainter oldDelegate) {
+    return oldDelegate.progress != progress;
+  }
+}
+
+// Dispensing Screen
+class _DispensingScreen extends StatefulWidget {
+  final String orderId;
+  final CartProvider cartProvider;
+  final MqttService mqttService;
+
+  const _DispensingScreen({
+    Key? key,
+    required this.orderId,
+    required this.cartProvider,
+    required this.mqttService,
+  }) : super(key: key);
+
+  @override
+  State<_DispensingScreen> createState() => _DispensingScreenState();
+}
+
+class _DispensingScreenState extends State<_DispensingScreen>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _progressController;
+  int _currentStep = 1; // 1=Payment, 2=Sending Command, 3=Dispensed
+  StreamSubscription? _dispenseSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    _progressController = AnimationController(
+      duration: const Duration(milliseconds: 1500),
+      vsync: this,
+    )..repeat();
+
+    // Listen for dispense result
+    _dispenseSubscription = widget.mqttService.dispenseResultStream.listen((
+      result,
+    ) {
+      final success = result['success'] as bool? ?? false;
+      final orderId = result['orderId'] as String?;
+
+      if (orderId == widget.orderId) {
+        if (success) {
+          setState(() {
+            _currentStep = 3;
+          });
+          // Wait a moment then navigate to success screen
+          Future.delayed(const Duration(seconds: 2), () {
+            if (mounted) {
+              widget.cartProvider.clear();
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(
+                  builder: (context) => const _PurchaseCompleteScreen(),
+                ),
+              );
+            }
+          });
+        }
+      }
+    });
+
+    // Simulate progress through steps
+    Future.delayed(const Duration(seconds: 3), () {
+      if (mounted) {
+        setState(() {
+          _currentStep = 2;
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _progressController.dispose();
+    _dispenseSubscription?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final baseProgress = (_currentStep - 1) / 3.0;
+    final nextProgress = _currentStep / 3.0;
+    final animatedProgress =
+        baseProgress +
+        (nextProgress - baseProgress) *
+            Curves.easeInOut.transform(_progressController.value);
+
+    return Scaffold(
+      backgroundColor: AppTheme.backgroundColor,
+      appBar: AppBar(
+        backgroundColor: AppTheme.backgroundColor,
+        elevation: 0,
+        centerTitle: true,
+        automaticallyImplyLeading: false,
+        title: const Text(
+          'Dispensing Item Anda',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: AppTheme.textPrimary,
+          ),
+        ),
+      ),
+      body: Column(
+        children: [
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Progress Circle
+                AnimatedBuilder(
+                  animation: _progressController,
+                  builder: (context, child) {
+                    return SizedBox(
+                      width: 200,
+                      height: 200,
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          // Background circle
+                          SizedBox(
+                            width: 200,
+                            height: 200,
+                            child: CircularProgressIndicator(
+                              value: 1.0,
+                              strokeWidth: 10,
+                              color: AppTheme.primary.withOpacity(0.2),
+                            ),
+                          ),
+                          // Progress circle
+                          SizedBox(
+                            width: 200,
+                            height: 200,
+                            child: CircularProgressIndicator(
+                              value: animatedProgress,
+                              strokeWidth: 10,
+                              color: AppTheme.primary,
+                            ),
+                          ),
+                          // Center text
+                          Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                '${(animatedProgress * 100).toInt()}%',
+                                style: const TextStyle(
+                                  fontSize: 40,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppTheme.textPrimary,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              const Text(
+                                'Dispensing...',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                  color: AppTheme.textSecondary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 48),
+                // Steps Timeline
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 32),
+                  child: Column(
+                    children: [
+                      _buildStep(
+                        stepNumber: 1,
+                        icon: Icons.check_circle,
+                        title: 'Pembayaran Terverifikasi',
+                        subtitle: 'Pembayaran Anda berhasil.',
+                        isCompleted: _currentStep >= 1,
+                        isActive: _currentStep == 1,
+                      ),
+                      _buildStep(
+                        stepNumber: 2,
+                        icon: Icons.signal_cellular_alt,
+                        title: 'Mengirim Perintah ke Mesin',
+                        subtitle: 'Menghubungkan ke perangkat...',
+                        isCompleted: _currentStep >= 2,
+                        isActive: _currentStep == 2,
+                      ),
+                      _buildStep(
+                        stepNumber: 3,
+                        icon: Icons.inventory_2_outlined,
+                        title: 'Item Dispensed',
+                        subtitle: 'Menunggu konfirmasi mesin.',
+                        isCompleted: _currentStep >= 3,
+                        isActive: _currentStep == 3,
+                        isLast: true,
+                      ),
+                    ],
                   ),
-                  SizedBox(width: 12),
-                  Text(
-                    'Mengecek status pembayaran...',
+                ),
+              ],
+            ),
+          ),
+          // Bottom button
+          Padding(
+            padding: const EdgeInsets.all(24),
+            child: SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: OutlinedButton(
+                onPressed: () {
+                  // Show help dialog
+                  showDialog(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      title: const Text('Ada Masalah?'),
+                      content: const Text(
+                        'Jika produk tidak keluar dalam 30 detik, silakan hubungi customer service.',
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.of(ctx).pop(),
+                          child: const Text('OK'),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+                style: OutlinedButton.styleFrom(
+                  backgroundColor: Colors.transparent,
+                  side: BorderSide(
+                    color: AppTheme.textSecondary.withOpacity(0.3),
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(9999),
+                  ),
+                ),
+                child: const Text(
+                  'Ada Masalah?',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.textPrimary,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStep({
+    required int stepNumber,
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required bool isCompleted,
+    required bool isActive,
+    bool isLast = false,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Icon column
+        Column(
+          children: [
+            Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: isCompleted
+                    ? AppTheme.primary
+                    : AppTheme.primary.withOpacity(0.2),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                isCompleted ? Icons.check : icon,
+                color: isCompleted
+                    ? Colors.white
+                    : AppTheme.primary.withOpacity(0.7),
+                size: 18,
+              ),
+            ),
+            if (!isLast)
+              Container(
+                width: 2,
+                height: 48,
+                color: isCompleted
+                    ? AppTheme.primary
+                    : AppTheme.primary.withOpacity(0.2),
+              ),
+          ],
+        ),
+        const SizedBox(width: 16),
+        // Text column
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.only(top: 4, bottom: 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                    color: isCompleted || isActive
+                        ? AppTheme.textPrimary
+                        : AppTheme.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: isCompleted || isActive
+                        ? AppTheme.textSecondary
+                        : AppTheme.textSecondary.withOpacity(0.6),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// Purchase Complete Screen
+class _PurchaseCompleteScreen extends StatelessWidget {
+  const _PurchaseCompleteScreen({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppTheme.backgroundColor,
+      appBar: AppBar(
+        backgroundColor: AppTheme.backgroundColor,
+        elevation: 0,
+        centerTitle: true,
+        automaticallyImplyLeading: false,
+        title: const Text(
+          'Sukses',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: AppTheme.textPrimary,
+          ),
+        ),
+      ),
+      body: Column(
+        children: [
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Success Icon
+                Container(
+                  width: 160,
+                  height: 160,
+                  decoration: BoxDecoration(
+                    color: AppTheme.primary.withOpacity(0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.check_circle,
+                    size: 120,
+                    color: AppTheme.primary,
+                  ),
+                ),
+                const SizedBox(height: 32),
+                // Title
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 32),
+                  child: Text(
+                    'Pembelian Selesai',
                     style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
+                      fontSize: 32,
                       fontWeight: FontWeight.bold,
+                      color: AppTheme.textPrimary,
+                      letterSpacing: -0.5,
                     ),
+                    textAlign: TextAlign.center,
                   ),
-                ],
+                ),
+                const SizedBox(height: 16),
+                // Subtitle
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 32),
+                  child: Text(
+                    'Silakan ambil item Anda dari baki.',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: AppTheme.textSecondary,
+                      height: 1.5,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Back to Home button
+          Padding(
+            padding: const EdgeInsets.all(32),
+            child: SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.of(context).pushAndRemoveUntil(
+                    MaterialPageRoute(
+                      builder: (context) =>
+                          const HomeScreen(initialTabIndex: 0),
+                    ),
+                    (route) => false,
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primary,
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: const Text(
+                  'Kembali ke Beranda',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
               ),
             ),
           ),

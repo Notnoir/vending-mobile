@@ -19,8 +19,6 @@ class _ProductListScreenState extends State<ProductListScreen> {
   bool _isLoading = true;
   String? _errorMessage;
   final TextEditingController _searchController = TextEditingController();
-  final PageController _bannerPageController = PageController();
-  int _currentBannerPage = 0;
 
   @override
   void initState() {
@@ -31,7 +29,6 @@ class _ProductListScreenState extends State<ProductListScreen> {
   @override
   void dispose() {
     _searchController.dispose();
-    _bannerPageController.dispose();
     super.dispose();
   }
 
@@ -58,42 +55,25 @@ class _ProductListScreenState extends State<ProductListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
-      body: Column(
-        children: [
-          // MyBCA-style Header with Rounded Bottom
-          _buildModernHeader(),
+      backgroundColor: AppTheme.backgroundColor,
+      body: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Clean Header with Search (scrolls with content)
+            _buildModernHeader(),
 
-          // Scrollable Content
-          Expanded(
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: 16),
+            const SizedBox(height: 16),
 
-                  // Mini Categories (Horizontal Icons)
-                  _buildMiniCategories(),
+            // Feature Cards (AI Assistant & Scan Prescription)
+            _buildActionButtons(),
 
-                  const SizedBox(height: 16),
+            const SizedBox(height: 20),
 
-                  // Action Buttons (Scan & Gift)
-                  _buildActionButtons(),
-
-                  const SizedBox(height: 20),
-
-                  // Promo Banner
-                  _buildPromoBanner(),
-
-                  const SizedBox(height: 20),
-
-                  // Products Section
-                  _buildProductsSection(),
-                ],
-              ),
-            ),
-          ),
-        ],
+            // Products Section
+            _buildProductsSection(),
+          ],
+        ),
       ),
     );
   }
@@ -101,215 +81,131 @@ class _ProductListScreenState extends State<ProductListScreen> {
   Widget _buildModernHeader() {
     return Container(
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [AppTheme.primaryBlue, AppTheme.darkBlue],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        color: AppTheme.primary,
         borderRadius: const BorderRadius.only(
-          bottomLeft: Radius.circular(30),
-          bottomRight: Radius.circular(30),
+          bottomLeft: Radius.circular(24),
+          bottomRight: Radius.circular(24),
         ),
-        boxShadow: [
-          BoxShadow(
-            color: AppTheme.primaryBlue.withOpacity(0.3),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
       ),
-      child: SafeArea(
-        bottom: false,
-        child: Column(
-          children: [
-            // Top Bar
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
-              child: Row(
-                children: [
-                  // App Logo/Icon
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(
-                      Icons.local_hospital,
-                      color: Colors.white,
-                      size: 24,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  // App Name
-                  const Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'MediVend',
+      child: Column(
+        children: [
+          SafeArea(
+            bottom: false,
+            child: Column(
+              children: [
+                // Top Bar - Clean header with white text
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+                  child: Row(
+                    children: [
+                      // MediVend Logo
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Image.asset(
+                          'assets/images/MediVendLogo.png',
+                          width: 32,
+                          height: 32,
+                          errorBuilder: (context, error, stackTrace) {
+                            return const Icon(
+                              Icons.health_and_safety,
+                              color: AppTheme.primary,
+                              size: 28,
+                            );
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      // Greeting Text
+                      const Expanded(
+                        child: Text(
+                          'Hello, User',
                           style: TextStyle(
                             color: Colors.white,
-                            fontSize: 20,
+                            fontSize: 18,
                             fontWeight: FontWeight.bold,
-                            letterSpacing: 0.5,
+                            letterSpacing: -0.5,
                           ),
                         ),
-                        Text(
-                          'Kesehatan dalam Genggaman',
-                          style: TextStyle(
-                            color: Colors.white70,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w400,
-                          ),
+                      ),
+                      // Connected Status
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
                         ),
-                      ],
-                    ),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: const [
+                            Text(
+                              'Connected',
+                              style: TextStyle(
+                                color: Color.fromARGB(255, 4, 255, 0),
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            SizedBox(width: 6),
+                            Icon(
+                              Icons.wifi,
+                              color: Color.fromARGB(255, 4, 255, 0),
+                              size: 16,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                  // Icon Buttons
-                  IconButton(
-                    onPressed: () {},
-                    icon: const Icon(
-                      Icons.notifications_outlined,
-                      color: Colors.white,
-                      size: 24,
-                    ),
-                    style: IconButton.styleFrom(
-                      backgroundColor: Colors.white.withOpacity(0.2),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  IconButton(
-                    onPressed: () {},
-                    icon: const Icon(
-                      Icons.settings_outlined,
-                      color: Colors.white,
-                      size: 24,
-                    ),
-                    style: IconButton.styleFrom(
-                      backgroundColor: Colors.white.withOpacity(0.2),
-                    ),
+                ),
+              ],
+            ),
+          ),
+
+          // Search Bar (outside SafeArea to allow proper scrolling)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
                   ),
                 ],
               ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMiniCategories() {
-    final categories = [
-      {
-        'icon': Icons.medication,
-        'label': 'Obat',
-        'color': const Color(0xFFFF9800),
-      },
-      {
-        'icon': Icons.favorite,
-        'label': 'Vitamin',
-        'color': const Color(0xFFFFC107),
-      },
-      {
-        'icon': Icons.healing,
-        'label': 'Suplemen',
-        'color': const Color(0xFF42A5F5),
-      },
-      {
-        'icon': Icons.medical_services,
-        'label': 'P3K',
-        'color': const Color(0xFFFF9800),
-      },
-      {
-        'icon': Icons.sanitizer,
-        'label': 'Sanitasi',
-        'color': const Color(0xFFFFC107),
-      },
-      {
-        'icon': Icons.masks,
-        'label': 'Masker',
-        'color': const Color(0xFF42A5F5),
-      },
-    ];
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 16),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Kategori Produk',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-              Text(
-                'Lihat semua',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: AppTheme.primaryBlue,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 12),
-        SizedBox(
-          height: 90,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            itemCount: categories.length,
-            itemBuilder: (context, index) {
-              final category = categories[index];
-              return Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 4),
-                child: InkWell(
-                  onTap: () {
-                    // Filter by category
-                  },
-                  child: Container(
-                    width: 70,
-                    child: Column(
-                      children: [
-                        Container(
-                          width: 60,
-                          height: 60,
-                          decoration: BoxDecoration(
-                            color: (category['color'] as Color).withOpacity(
-                              0.1,
-                            ),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Icon(
-                            category['icon'] as IconData,
-                            color: category['color'] as Color,
-                            size: 30,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          category['label'] as String,
-                          style: const TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w500,
-                          ),
-                          textAlign: TextAlign.center,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
+              child: TextField(
+                controller: _searchController,
+                decoration: InputDecoration(
+                  hintText: 'Cari produk medis...',
+                  hintStyle: TextStyle(
+                    color: AppTheme.textSecondary,
+                    fontSize: 15,
+                  ),
+                  prefixIcon: Icon(Icons.search, color: AppTheme.textSecondary),
+                  border: InputBorder.none,
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 14,
                   ),
                 ),
-              );
-            },
+                onChanged: (value) {
+                  // Implement search logic
+                },
+              ),
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -318,215 +214,119 @@ class _ProductListScreenState extends State<ProductListScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(
         children: [
+          // AI Health Assistant Card
           Expanded(
-            child: Container(
-              height: 50,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [AppTheme.primaryBlue, AppTheme.darkBlue],
-                ),
-                borderRadius: BorderRadius.circular(25),
-              ),
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const PrescriptionScanScreen(),
-                      ),
-                    );
-                  },
-                  borderRadius: BorderRadius.circular(25),
-                  child: const Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.qr_code_scanner,
-                        color: Colors.white,
-                        size: 20,
-                      ),
-                      SizedBox(width: 8),
-                      Text(
-                        'Pindai Resep',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                        ),
-                      ),
-                    ],
+            child: GestureDetector(
+              onTap: () {
+                // Navigate to AI Health Assistant
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('AI Health Assistant - Coming Soon!'),
                   ),
+                );
+              },
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppTheme.cardColor,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: AppTheme.primary.withOpacity(0.2),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.smart_toy,
+                        color: AppTheme.primary,
+                        size: 28,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'AI Health\nAssistant',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: AppTheme.textPrimary,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        height: 1.3,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 16),
+          // Scan Prescription Card
           Expanded(
-            child: Container(
-              height: 50,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [AppTheme.accentBlue, AppTheme.lightBlue],
-                ),
-                borderRadius: BorderRadius.circular(25),
-              ),
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: () {},
-                  borderRadius: BorderRadius.circular(25),
-                  child: const Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.card_giftcard, color: Colors.white, size: 20),
-                      SizedBox(width: 8),
-                      Text(
-                        'Promo & Hadiah',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                        ),
-                      ),
-                    ],
+            child: GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const PrescriptionScanScreen(),
                   ),
+                );
+              },
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppTheme.cardColor,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: AppTheme.primary.withOpacity(0.2),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.qr_code_scanner,
+                        color: AppTheme.primary,
+                        size: 28,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'Scan\nResep',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: AppTheme.textPrimary,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        height: 1.3,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildPromoBanner() {
-    final banners = [
-      {
-        'title': 'Promo Spesial Hari Ini! 🎉',
-        'subtitle': 'Diskon hingga 50%',
-        'icon': Icons.local_offer,
-        'colors': [Color(0xFFFF6B6B), Color(0xFFFFB26B)],
-      },
-      {
-        'title': 'Gratis Ongkir! 🚚',
-        'subtitle': 'Untuk pembelian minimal Rp 100.000',
-        'icon': Icons.local_shipping,
-        'colors': [Color(0xFF6BCF7E), Color(0xFF4ECDC4)],
-      },
-      {
-        'title': 'Flash Sale 24 Jam! ⚡',
-        'subtitle': 'Produk pilihan diskon besar-besaran',
-        'icon': Icons.flash_on,
-        'colors': [AppTheme.primaryBlue, AppTheme.darkBlue],
-      },
-    ];
-
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: SizedBox(
-            height: 150,
-            child: PageView.builder(
-              controller: _bannerPageController,
-              onPageChanged: (index) {
-                setState(() {
-                  _currentBannerPage = index;
-                });
-              },
-              itemCount: banners.length,
-              itemBuilder: (context, index) {
-                final banner = banners[index];
-                return Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 4),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(16),
-                    gradient: LinearGradient(
-                      colors: banner['colors'] as List<Color>,
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: (banner['colors'] as List<Color>)[0].withOpacity(
-                          0.3,
-                        ),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: () {},
-                      borderRadius: BorderRadius.circular(16),
-                      child: Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              banner['icon'] as IconData,
-                              color: Colors.white,
-                              size: 40,
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              banner['title'] as String,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                            const SizedBox(height: 4),
-                            Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 20,
-                              ),
-                              child: Text(
-                                banner['subtitle'] as String,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 13,
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-        ),
-        const SizedBox(height: 12),
-        // Indicator dots
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: List.generate(
-            banners.length,
-            (index) => AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
-              margin: const EdgeInsets.symmetric(horizontal: 4),
-              width: _currentBannerPage == index ? 24 : 8,
-              height: 8,
-              decoration: BoxDecoration(
-                color: _currentBannerPage == index
-                    ? AppTheme.primaryBlue
-                    : Colors.grey.shade300,
-                borderRadius: BorderRadius.circular(4),
-              ),
-            ),
-          ),
-        ),
-      ],
     );
   }
 
