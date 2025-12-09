@@ -17,7 +17,7 @@ class ApiConfig {
 
   // Current environment
   // GANTI ke true untuk menggunakan production API
-  static const bool isProduction = true;
+  static const bool isProduction = false;
 
   // Get active base URL
   static String get baseUrl => isProduction ? productionUrl : developmentUrl;

@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 import '../theme/app_theme.dart';
+import '../services/auth_service.dart';
+import 'login_screen.dart';
 import 'home_screen.dart';
+import 'admin_dashboard_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -11,26 +14,47 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> {
+  final _authService = AuthService();
+
   @override
   void initState() {
     super.initState();
+    _initialize();
+  }
 
-    // Navigate to home after 3 seconds
-    Timer(const Duration(seconds: 3), () {
-      if (mounted) {
-        Navigator.of(context).pushReplacement(
-          PageRouteBuilder(
-            pageBuilder: (context, animation, secondaryAnimation) =>
-                const HomeScreen(),
-            transitionsBuilder:
-                (context, animation, secondaryAnimation, child) {
-                  return FadeTransition(opacity: animation, child: child);
-                },
-            transitionDuration: const Duration(milliseconds: 500),
-          ),
-        );
+  Future<void> _initialize() async {
+    // Initialize auth service
+    await _authService.init();
+
+    // Wait for splash display
+    await Future.delayed(const Duration(seconds: 3));
+
+    if (!mounted) return;
+
+    // Navigate based on authentication status
+    Widget destination;
+
+    if (_authService.isLoggedIn) {
+      // Check user role
+      if (_authService.isAdmin) {
+        destination = const AdminDashboardScreen();
+      } else {
+        destination = const HomeScreen();
       }
-    });
+    } else {
+      // Not logged in, go to login screen
+      destination = const LoginScreen();
+    }
+
+    Navigator.of(context).pushReplacement(
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) => destination,
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return FadeTransition(opacity: animation, child: child);
+        },
+        transitionDuration: const Duration(milliseconds: 500),
+      ),
+    );
   }
 
   @override
