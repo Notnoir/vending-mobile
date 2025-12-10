@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
 import 'login_screen.dart';
+import 'machine_list_screen.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -188,9 +189,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           subtitle: 'View all machines',
                           color: Colors.blue,
                           onTap: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('All Machines - Coming Soon'),
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => const MachineListScreen(),
                               ),
                             );
                           },

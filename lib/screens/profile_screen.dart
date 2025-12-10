@@ -1,8 +1,72 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
+import '../services/auth_service.dart';
+import 'login_screen.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
+
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  final _authService = AuthService();
+  bool _isLoading = false;
+
+  String get userName {
+    if (_authService.userData != null) {
+      return _authService.userData!['full_name'] ?? 'Pengguna';
+    }
+    return 'Guest';
+  }
+
+  String get userEmail {
+    if (_authService.userData != null) {
+      return _authService.userData!['email'] ?? 'guest@example.com';
+    }
+    return 'Not logged in';
+  }
+
+  bool get isLoggedIn => _authService.isLoggedIn;
+
+  void _handleLogout() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Logout'),
+        content: const Text('Apakah Anda yakin ingin logout?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Batal'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              setState(() => _isLoading = true);
+
+              await _authService.logout();
+
+              if (!mounted) return;
+
+              Navigator.of(context).pushAndRemoveUntil(
+                MaterialPageRoute(builder: (_) => const LoginScreen()),
+                (route) => false,
+              );
+            },
+            child: const Text('Logout', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _navigateToLogin() {
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => const LoginScreen()));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -52,35 +116,82 @@ class ProfileScreen extends StatelessWidget {
                   ),
                 ),
                 padding: const EdgeInsets.all(24),
-                child: const Column(
+                child: Column(
                   children: [
                     CircleAvatar(
                       radius: 50,
                       backgroundColor: AppTheme.accentBlue,
                       child: Icon(
-                        Icons.person,
+                        isLoggedIn ? Icons.person : Icons.person_outline,
                         size: 60,
                         color: AppTheme.darkBlue,
                       ),
                     ),
-                    SizedBox(height: 16),
+                    const SizedBox(height: 16),
                     Text(
-                      'Pengguna',
-                      style: TextStyle(
+                      userName,
+                      style: const TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
                       ),
                     ),
-                    SizedBox(height: 4),
+                    const SizedBox(height: 4),
                     Text(
-                      'user@vendingmachine.com',
-                      style: TextStyle(fontSize: 16, color: Colors.white70),
+                      userEmail,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        color: Colors.white70,
+                      ),
                     ),
                   ],
                 ),
               ),
             ),
+            const SizedBox(height: 24),
+
+            // Logout or Login Button
+            if (isLoggedIn)
+              Card(
+                elevation: 2,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: ListTile(
+                  leading: const Icon(Icons.logout, color: Colors.red),
+                  title: const Text(
+                    'Logout',
+                    style: TextStyle(
+                      color: Colors.red,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  trailing: const Icon(Icons.chevron_right, color: Colors.red),
+                  onTap: _handleLogout,
+                ),
+              )
+            else
+              Card(
+                elevation: 2,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: ListTile(
+                  leading: const Icon(Icons.login, color: AppTheme.primaryBlue),
+                  title: const Text(
+                    'Login',
+                    style: TextStyle(
+                      color: AppTheme.primaryBlue,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  trailing: const Icon(
+                    Icons.chevron_right,
+                    color: AppTheme.primaryBlue,
+                  ),
+                  onTap: _navigateToLogin,
+                ),
+              ),
             const SizedBox(height: 24),
 
             // App Info
