@@ -3,7 +3,9 @@ import '../services/auth_service.dart';
 import 'login_screen.dart';
 import 'machine_list_screen.dart';
 import 'machine_monitoring_screen.dart';
-import 'product_list_screen.dart';
+import 'admin_inventory_screen.dart';
+import 'admin_users_screen.dart';
+import 'admin_finance_screen.dart';
 
 class AdminDashboardModernScreen extends StatefulWidget {
   const AdminDashboardModernScreen({super.key});
@@ -162,8 +164,9 @@ class _AdminDashboardModernScreenState
           children: [
             _buildDashboardView(isDark, userData),
             const MachineListScreen(),
-            const ProductListScreen(),
-            _buildUsersView(isDark),
+            const AdminInventoryScreen(),
+            const AdminUsersScreen(),
+            const AdminFinanceScreen(),
           ],
         ),
       ),
@@ -891,6 +894,13 @@ class _AdminDashboardModernScreenState
             index: 3,
             isDark: isDark,
           ),
+          _buildNavItem(
+            icon: Icons.attach_money,
+            activeIcon: Icons.attach_money,
+            label: 'Finance',
+            index: 4,
+            isDark: isDark,
+          ),
         ],
       ),
     );
@@ -907,7 +917,7 @@ class _AdminDashboardModernScreenState
     return InkWell(
       onTap: () => setState(() => _selectedIndex = index),
       child: SizedBox(
-        width: MediaQuery.of(context).size.width / 4,
+        width: MediaQuery.of(context).size.width / 5,
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -918,13 +928,13 @@ class _AdminDashboardModernScreenState
                   : (isDark
                         ? const Color(0xFF94A3B8)
                         : const Color(0xFF64748B)),
-              size: 26,
+              size: 24,
             ),
             const SizedBox(height: 4),
             Text(
               label,
               style: TextStyle(
-                fontSize: 12,
+                fontSize: 10,
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
                 color: isSelected
                     ? const Color(0xFF13ECDA)
