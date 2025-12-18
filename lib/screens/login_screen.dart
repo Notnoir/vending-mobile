@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
 import 'home_screen.dart';
-import 'admin_dashboard_screen.dart';
+import 'admin_dashboard_modern_screen.dart';
 import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -55,7 +55,9 @@ class _LoginScreenState extends State<LoginScreen> {
         // Navigate based on role
         if (role == 'admin') {
           Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (_) => const AdminDashboardScreen()),
+            MaterialPageRoute(
+              builder: (_) => const AdminDashboardModernScreen(),
+            ),
           );
         } else {
           Navigator.of(context).pushReplacement(

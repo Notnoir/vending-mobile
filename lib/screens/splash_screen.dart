@@ -4,7 +4,7 @@ import '../theme/app_theme.dart';
 import '../services/auth_service.dart';
 import 'login_screen.dart';
 import 'home_screen.dart';
-import 'admin_dashboard_screen.dart';
+import 'admin_dashboard_modern_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -37,7 +37,7 @@ class _SplashScreenState extends State<SplashScreen> {
     if (_authService.isLoggedIn) {
       // Check user role
       if (_authService.isAdmin) {
-        destination = const AdminDashboardScreen();
+        destination = const AdminDashboardModernScreen();
       } else {
         destination = const HomeScreen();
       }
