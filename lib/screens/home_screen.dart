@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/cart_provider.dart';
 import '../theme/app_theme.dart';
+import '../services/announcement_service.dart';
+import '../widgets/announcement_popup.dart';
 import 'product_list_screen.dart';
 import 'cart_screen.dart';
 import 'order_history_screen.dart';
@@ -21,12 +23,35 @@ class _HomeScreenState extends State<HomeScreen>
     with SingleTickerProviderStateMixin {
   late int _selectedIndex;
   late PageController _pageController;
+  bool _announcementsLoaded = false;
 
   @override
   void initState() {
     super.initState();
     _selectedIndex = widget.initialTabIndex;
     _pageController = PageController(initialPage: widget.initialTabIndex);
+    
+    // Load announcements after initial build
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadAnnouncements();
+    });
+  }
+
+  Future<void> _loadAnnouncements() async {
+    if (_announcementsLoaded) return;
+    _announcementsLoaded = true;
+
+    try {
+      final announcements = await AnnouncementService.getActiveAnnouncements();
+      
+      if (!mounted) return;
+      
+      if (announcements.isNotEmpty) {
+        await showAnnouncementPopup(context, announcements);
+      }
+    } catch (e) {
+      print('Error loading announcements: $e');
+    }
   }
 
   @override
