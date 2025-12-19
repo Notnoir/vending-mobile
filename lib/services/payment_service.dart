@@ -19,32 +19,32 @@ class PaymentService {
     required double totalAmount,
   }) async {
     try {
-      // For now, we only support single item orders
-      // Create order directly to backend using slot_id
+      // Create order with all items
       if (items.isEmpty) {
         throw Exception('No items in cart');
       }
 
-      final firstItem = items[0];
-
       // DEBUG: Log data yang akan dikirim
       print('📦 Creating payment with data:');
-      print(
-        '  slot_id: ${firstItem['slot_id']} (${firstItem['slot_id'].runtimeType})',
-      );
-      print(
-        '  quantity: ${firstItem['quantity']} (${firstItem['quantity'].runtimeType})',
-      );
+      print('  Total items: ${items.length}');
+      print('  Total amount: $totalAmount');
+      
+      for (var i = 0; i < items.length; i++) {
+        print('  Item ${i + 1}: slot=${items[i]['slot_id']}, qty=${items[i]['quantity']}, price=${items[i]['price']}');
+      }
 
       final requestBody = {
-        'slot_id': firstItem['slot_id'],
-        'quantity': firstItem['quantity'],
+        'items': items, // Send all items array
       };
 
       print('📦 Request body: $requestBody');
 
+      // Use /orders/multi endpoint for multi-item orders
+      final endpoint = items.length > 1 ? '/orders/multi' : '/orders';
+      print('📦 Using endpoint: $endpoint');
+
       final response = await _apiService.post(
-        ApiEndpoints.orders, // Use backend orders endpoint directly
+        endpoint,
         body: requestBody,
       );
 

@@ -173,7 +173,11 @@ class MqttService {
   }
 
   // Publish dispense command
-  bool publishDispenseCommand({required String orderId, required int slot}) {
+  bool publishDispenseCommand({
+    required String orderId,
+    required int slot,
+    int quantity = 1,
+  }) {
     if (!_isConnected || _client == null) {
       print('❌ Cannot publish - MQTT not connected');
       return false;
@@ -185,6 +189,7 @@ class MqttService {
         'cmd': 'dispense',
         'orderId': orderId,
         'slot': slot,
+        'quantity': quantity,
         'timestamp': DateTime.now().toIso8601String(),
       });
 

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import 'login_screen.dart';
-import 'machine_list_screen.dart';
+import 'admin_features_screen.dart';
 import 'machine_monitoring_screen.dart';
 import 'admin_inventory_screen.dart';
 import 'admin_users_screen.dart';
@@ -163,7 +163,7 @@ class _AdminDashboardModernScreenState
           index: _selectedIndex,
           children: [
             _buildDashboardView(isDark, userData),
-            const MachineListScreen(),
+            const AdminFeaturesScreen(),
             const AdminInventoryScreen(),
             const AdminUsersScreen(),
             const AdminFinanceScreen(),
@@ -874,9 +874,9 @@ class _AdminDashboardModernScreenState
             isDark: isDark,
           ),
           _buildNavItem(
-            icon: Icons.local_convenience_store_outlined,
-            activeIcon: Icons.local_convenience_store,
-            label: 'Machines',
+            icon: Icons.dashboard_customize_outlined,
+            activeIcon: Icons.dashboard_customize,
+            label: 'Features',
             index: 1,
             isDark: isDark,
           ),

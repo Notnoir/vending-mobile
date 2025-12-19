@@ -45,6 +45,21 @@ class _AdminFinanceScreenState extends State<AdminFinanceScreen> {
     _loadFinancialData();
   }
 
+  String _formatRupiah(num value) {
+    final numberString = value.toInt().toString();
+    final reversed = numberString.split('').reversed.toList();
+    String formatted = '';
+    
+    for (int i = 0; i < reversed.length; i++) {
+      if (i > 0 && i % 3 == 0) {
+        formatted = '.$formatted';
+      }
+      formatted = reversed[i] + formatted;
+    }
+    
+    return formatted;
+  }
+
   Future<void> _loadFinancialData() async {
     setState(() => _isLoading = true);
 
@@ -505,7 +520,7 @@ class _AdminFinanceScreenState extends State<AdminFinanceScreen> {
               children: [
                 _buildStatCard(
                   'Total Revenue',
-                  '\$${_stats['totalRevenue'].toStringAsFixed(2)}',
+                  'Rp ${_formatRupiah(_stats['totalRevenue'])}',
                   _stats['revenueChange'],
                   Icons.attach_money,
                   const Color(0xFF00A8A8),
@@ -513,7 +528,7 @@ class _AdminFinanceScreenState extends State<AdminFinanceScreen> {
                 ),
                 _buildStatCard(
                   'Total Expenses',
-                  '\$${_stats['totalExpenses'].toStringAsFixed(2)}',
+                  'Rp ${_formatRupiah(_stats['totalExpenses'])}',
                   _stats['expensesChange'],
                   Icons.money_off,
                   const Color(0xFFF97316),
@@ -522,7 +537,7 @@ class _AdminFinanceScreenState extends State<AdminFinanceScreen> {
                 ),
                 _buildStatCard(
                   'Net Profit',
-                  '\$${_stats['netProfit'].toStringAsFixed(2)}',
+                  'Rp ${_formatRupiah(_stats['netProfit'])}',
                   _stats['profitChange'],
                   Icons.account_balance_wallet,
                   const Color(0xFF10B981),
@@ -530,7 +545,7 @@ class _AdminFinanceScreenState extends State<AdminFinanceScreen> {
                 ),
                 _buildStatCard(
                   'Avg. Tx Value',
-                  '\$${_stats['avgTxValue'].toStringAsFixed(2)}',
+                  'Rp ${_formatRupiah(_stats['avgTxValue'])}',
                   _stats['avgChange'],
                   Icons.receipt,
                   const Color(0xFF3B82F6),
@@ -728,7 +743,7 @@ class _AdminFinanceScreenState extends State<AdminFinanceScreen> {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    '\$12,450',
+                    'Rp 12.450.000',
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w800,
@@ -800,7 +815,7 @@ class _AdminFinanceScreenState extends State<AdminFinanceScreen> {
                         ),
                       ),
                       Text(
-                        '\$4.2k',
+                        'Rp 4.200.000',
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w800,
@@ -1402,7 +1417,7 @@ class _AdminFinanceScreenState extends State<AdminFinanceScreen> {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    '\$${tx['amount'].toStringAsFixed(2)}',
+                    'Rp ${_formatRupiah(tx['amount'])}',
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w700,

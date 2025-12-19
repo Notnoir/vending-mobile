@@ -224,16 +224,17 @@ class _PaymentScreenState extends State<PaymentScreen> {
         return;
       }
 
-      // STEP 1: Create order in backend first (for single item only for now)
+      // STEP 1: Create order in backend first (with all items)
       print('📦 Step 1: Creating order in backend...');
-      final firstItem = cartProvider.items[0];
-      final items = [
-        {
-          'slot_id': firstItem.product.slotId!,
-          'quantity': firstItem.quantity,
-          'price': firstItem.product.price,
-        },
-      ];
+      final items = cartProvider.items
+          .map(
+            (item) => {
+              'slot_id': item.product.slotId!,
+              'quantity': item.quantity,
+              'price': item.product.price,
+            },
+          )
+          .toList();
 
       final backendOrder = await _paymentService.createPayment(
         items: items,
@@ -424,35 +425,39 @@ class _PaymentScreenState extends State<PaymentScreen> {
       return;
     }
 
-    // Get slot number from payment
-    // Assuming payment has slot_id or we can get it from cart
+    // Get all items from payment
     final cartProvider = Provider.of<CartProvider>(context, listen: false);
     if (cartProvider.items.isEmpty) {
       print('⚠️ Cannot trigger dispense - cart is empty');
       return;
     }
 
-    final firstItem = cartProvider.items.first;
-    final slotId = firstItem.product.slotId;
-
-    if (slotId == null) {
-      print('⚠️ Cannot trigger dispense - no slot ID');
-      return;
-    }
-
-    print('📤 Triggering MQTT dispense command...');
+    print('📤 Triggering MQTT dispense command for all items...');
     print('   Order ID: ${_payment!.orderId}');
-    print('   Slot: $slotId');
+    print('   Total items: ${cartProvider.items.length}');
 
-    final published = _mqttService.publishDispenseCommand(
-      orderId: _payment!.orderId,
-      slot: slotId,
-    );
+    // Send dispense command for each item
+    for (var item in cartProvider.items) {
+      final slotId = item.product.slotId;
 
-    if (published) {
-      print('✅ Dispense command published via MQTT');
-    } else {
-      print('❌ Failed to publish dispense command');
+      if (slotId == null) {
+        print('⚠️ Skipping item ${item.product.name} - no slot ID');
+        continue;
+      }
+
+      print('   Dispensing: ${item.product.name} x${item.quantity} from slot $slotId');
+
+      final published = _mqttService.publishDispenseCommand(
+        orderId: _payment!.orderId,
+        slot: slotId,
+        quantity: item.quantity,
+      );
+
+      if (published) {
+        print('   ✅ Dispense command published for ${item.product.name}');
+      } else {
+        print('   ❌ Failed to publish dispense command for ${item.product.name}');
+      }
     }
   }
 

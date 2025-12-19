@@ -5,6 +5,8 @@ import '../widgets/mcd_product_card.dart';
 import '../theme/app_theme.dart';
 import 'product_detail_screen.dart';
 import 'prescription_scan_screen.dart';
+import 'health_news_screen.dart';
+import 'ai_health_assistant_screen.dart';
 
 class ProductListScreen extends StatefulWidget {
   const ProductListScreen({super.key});
@@ -219,14 +221,15 @@ class _ProductListScreenState extends State<ProductListScreen> {
             child: GestureDetector(
               onTap: () {
                 // Navigate to AI Health Assistant
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('AI Health Assistant - Coming Soon!'),
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const AIHealthAssistantScreen(),
                   ),
                 );
               },
               child: Container(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: AppTheme.cardColor,
                   borderRadius: BorderRadius.circular(16),
@@ -241,8 +244,8 @@ class _ProductListScreenState extends State<ProductListScreen> {
                 child: Column(
                   children: [
                     Container(
-                      width: 48,
-                      height: 48,
+                      width: 44,
+                      height: 44,
                       decoration: BoxDecoration(
                         color: AppTheme.primary.withOpacity(0.2),
                         shape: BoxShape.circle,
@@ -250,18 +253,18 @@ class _ProductListScreenState extends State<ProductListScreen> {
                       child: const Icon(
                         Icons.smart_toy,
                         color: AppTheme.primary,
-                        size: 28,
+                        size: 24,
                       ),
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 8),
                     const Text(
                       'AI Health\nAssistant',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         color: AppTheme.textPrimary,
-                        fontSize: 13,
+                        fontSize: 11,
                         fontWeight: FontWeight.w600,
-                        height: 1.3,
+                        height: 1.2,
                       ),
                     ),
                   ],
@@ -269,7 +272,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
               ),
             ),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 12),
           // Scan Prescription Card
           Expanded(
             child: GestureDetector(
@@ -282,7 +285,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
                 );
               },
               child: Container(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: AppTheme.cardColor,
                   borderRadius: BorderRadius.circular(16),
@@ -297,8 +300,8 @@ class _ProductListScreenState extends State<ProductListScreen> {
                 child: Column(
                   children: [
                     Container(
-                      width: 48,
-                      height: 48,
+                      width: 44,
+                      height: 44,
                       decoration: BoxDecoration(
                         color: AppTheme.primary.withOpacity(0.2),
                         shape: BoxShape.circle,
@@ -306,18 +309,74 @@ class _ProductListScreenState extends State<ProductListScreen> {
                       child: const Icon(
                         Icons.qr_code_scanner,
                         color: AppTheme.primary,
-                        size: 28,
+                        size: 24,
                       ),
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 8),
                     const Text(
                       'Scan\nResep',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         color: AppTheme.textPrimary,
-                        fontSize: 13,
+                        fontSize: 11,
                         fontWeight: FontWeight.w600,
-                        height: 1.3,
+                        height: 1.2,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          // Health News Card
+          Expanded(
+            child: GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const HealthNewsScreen(),
+                  ),
+                );
+              },
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppTheme.cardColor,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: AppTheme.primary.withOpacity(0.2),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.article,
+                        color: AppTheme.primary,
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Health\nNews',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: AppTheme.textPrimary,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        height: 1.2,
                       ),
                     ),
                   ],
