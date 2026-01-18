@@ -48,6 +48,7 @@ class ApiEndpoints {
   static const String orders = '/orders';
   static String orderById(String id) => '/orders/$id';
   static String updateOrderStatus(String id) => '/orders/$id/status';
+  static String machineOrders(String machineId) => '/orders/machine/$machineId';
 
   // Images
   static const String uploadImage = '/upload';

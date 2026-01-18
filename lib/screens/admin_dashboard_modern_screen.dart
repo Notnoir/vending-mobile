@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:fl_chart/fl_chart.dart';
+import 'package:intl/intl.dart';
 import '../services/auth_service.dart';
+import '../services/order_service.dart';
+import '../services/api_service.dart';
 import 'login_screen.dart';
 import 'admin_features_screen.dart';
 import 'machine_monitoring_screen.dart';
@@ -18,6 +22,7 @@ class AdminDashboardModernScreen extends StatefulWidget {
 class _AdminDashboardModernScreenState
     extends State<AdminDashboardModernScreen> {
   final _authService = AuthService();
+  final _orderService = OrderService();
   int _selectedIndex = 0;
 
   // Dashboard data
@@ -30,6 +35,9 @@ class _AdminDashboardModernScreenState
 
   List<Map<String, dynamic>> _machineAlerts = [];
   List<Map<String, dynamic>> _recentTransactions = [];
+  List<Map<String, dynamic>> _weeklySalesData = [];
+  double _totalWeeklySales = 0;
+  bool _isLoadingWeeklySales = true;
 
   @override
   void initState() {
@@ -44,6 +52,7 @@ class _AdminDashboardModernScreenState
         _loadStats(),
         _loadMachineAlerts(),
         _loadRecentTransactions(),
+        _loadWeeklySales(),
       ]);
     } catch (e) {
       print('Error loading dashboard: $e');
@@ -52,13 +61,74 @@ class _AdminDashboardModernScreenState
 
   Future<void> _loadStats() async {
     try {
-      // Mock data - replace with actual API calls
+      final apiService = ApiService();
+      final machineId = 'VM01'; // Or get from config
+
+      double todayRevenue = 0;
+      int lowStockCount = 0;
+      int emptySlots = 0;
+      int activeMachines = 0;
+      int totalMachines = 1;
+
+      // Get today's revenue from orders
+      try {
+        final now = DateTime.now();
+        final startOfDay = DateTime(now.year, now.month, now.day);
+        final orders = await _orderService.getOrdersByDateRange(
+          machineId: machineId,
+          startDate: startOfDay,
+          endDate: now.add(const Duration(days: 1)),
+        );
+
+        for (var order in orders) {
+          if (order['status'] == 'COMPLETED' || order['status'] == 'PAID') {
+            todayRevenue += (order['total_amount'] as num?)?.toDouble() ?? 0.0;
+          }
+        }
+      } catch (e) {
+        print('Error loading revenue: $e');
+      }
+
+      // Get stock levels from products/available (alternative endpoint)
+      try {
+        final products = await apiService.get('/products/available');
+        if (products is List) {
+          for (var product in products) {
+            final currentStock = product['currentStock'] ?? 0;
+            final capacity = product['capacity'] ?? 1;
+            final stockPercentage = (currentStock / capacity) * 100;
+
+            if (currentStock == 0) {
+              emptySlots++;
+            } else if (stockPercentage <= 20) {
+              lowStockCount++;
+            }
+          }
+        }
+      } catch (e) {
+        print('Error loading stock: $e');
+      }
+
+      // Get machine data for status
+      try {
+        final machineData = await apiService.get('/machine-data/latest');
+        final machines = machineData['data'] ?? [];
+        activeMachines = machines.where((m) => m['status'] == 'ONLINE').length;
+        totalMachines = machines.length > 0 ? machines.length : 1;
+      } catch (e) {
+        print('Error loading machine data: $e');
+      }
+
+      // Calculate alerts (low stock + empty slots)
+      final alertCount = lowStockCount + emptySlots;
+
       setState(() {
         _dashboardStats = {
-          'activeMachines': '3/3',
-          'todayRevenue': 'Rp 450.000',
-          'lowStockItems': '5',
-          'alerts': '2',
+          'activeMachines': '$activeMachines/$totalMachines',
+          'todayRevenue':
+              'Rp ${NumberFormat('#,###', 'id_ID').format(todayRevenue)}',
+          'lowStockItems': '$lowStockCount',
+          'alerts': '$alertCount',
         };
       });
     } catch (e) {
@@ -68,25 +138,75 @@ class _AdminDashboardModernScreenState
 
   Future<void> _loadMachineAlerts() async {
     try {
+      final apiService = ApiService();
+      final machineId = 'VM01';
+
+      List<Map<String, dynamic>> alerts = [];
+
+      // Get stock alerts from products/available
+      try {
+        final products = await apiService.get('/products/available');
+        if (products is List) {
+          for (var product in products) {
+            final currentStock = product['currentStock'] ?? 0;
+            final capacity = product['capacity'] ?? 1;
+            final stockPercentage = (currentStock / capacity) * 100;
+
+            if (currentStock == 0) {
+              alerts.add({
+                'id': machineId,
+                'title': 'Machine $machineId - Out of Stock',
+                'subtitle': '${product['name']} (${currentStock}/${capacity})',
+                'icon': Icons.inventory_2_outlined,
+                'iconColor': Colors.red,
+                'iconBg': Colors.red.withOpacity(0.15),
+              });
+            } else if (stockPercentage <= 20) {
+              alerts.add({
+                'id': machineId,
+                'title': 'Machine $machineId - Low Stock',
+                'subtitle': '${product['name']} (${currentStock}/${capacity})',
+                'icon': Icons.inventory_2_outlined,
+                'iconColor': Colors.orange,
+                'iconBg': Colors.orange.withOpacity(0.15),
+              });
+            }
+          }
+        }
+      } catch (e) {
+        print('Error loading stock alerts: $e');
+      }
+
+      // Get machine telemetry alerts
+      try {
+        final machineData = await apiService.get(
+          '/machine-data/machine/$machineId?limit=1',
+        );
+        final data = machineData['data'] ?? [];
+        if (data.isNotEmpty) {
+          final latest = data[0];
+          final temp = latest['temperature'];
+
+          // Temperature alert (if too high or too low)
+          if (temp != null) {
+            if (temp > 30 || temp < 2) {
+              alerts.add({
+                'id': machineId,
+                'title': 'Machine $machineId - Temperature Alert',
+                'subtitle': 'Temperature: ${temp.toStringAsFixed(1)}°C',
+                'icon': Icons.thermostat_outlined,
+                'iconColor': Colors.amber,
+                'iconBg': Colors.amber.withOpacity(0.15),
+              });
+            }
+          }
+        }
+      } catch (e) {
+        print('Error loading telemetry alerts: $e');
+      }
+
       setState(() {
-        _machineAlerts = [
-          {
-            'id': 'VM01',
-            'title': 'Machine VM01 - Low Stock',
-            'subtitle': 'Warning triggered: 5 min ago',
-            'icon': Icons.inventory_2_outlined,
-            'iconColor': Colors.orange,
-            'iconBg': Colors.orange.withOpacity(0.15),
-          },
-          {
-            'id': 'VM02',
-            'title': 'Machine VM02 - Temperature Alert',
-            'subtitle': 'Last seen: 2 min ago',
-            'icon': Icons.thermostat_outlined,
-            'iconColor': Colors.amber,
-            'iconBg': Colors.amber.withOpacity(0.15),
-          },
-        ];
+        _machineAlerts = alerts.take(5).toList(); // Limit to 5 alerts
       });
     } catch (e) {
       print('Error loading alerts: $e');
@@ -95,30 +215,105 @@ class _AdminDashboardModernScreenState
 
   Future<void> _loadRecentTransactions() async {
     try {
+      final apiService = ApiService();
+      final machineId = 'VM01';
+
+      // Get recent orders
+      final response = await apiService.get(
+        '/orders/machine/$machineId?limit=5',
+      );
+      final orders = response['orders'] ?? [];
+
+      List<Map<String, dynamic>> transactions = [];
+      for (var order in orders) {
+        final createdAt = DateTime.parse(order['created_at']);
+        final timeStr = DateFormat('HH:mm').format(createdAt);
+
+        transactions.add({
+          'product': order['product_name'] ?? 'Unknown Product',
+          'machine': 'Machine $machineId',
+          'time': timeStr,
+          'amount':
+              'Rp ${NumberFormat('#,###', 'id_ID').format(order['total_amount'] ?? 0)}',
+          'status': order['status'],
+        });
+      }
+
       setState(() {
-        _recentTransactions = [
-          {
-            'product': 'Paracetamol 500mg',
-            'machine': 'Machine VM01',
-            'time': '10:45 AM',
-            'amount': 'Rp 15.000',
-          },
-          {
-            'product': 'Vitamin C',
-            'machine': 'Machine VM02',
-            'time': '10:42 AM',
-            'amount': 'Rp 25.000',
-          },
-          {
-            'product': 'Hand Sanitizer',
-            'machine': 'Machine VM03',
-            'time': '10:39 AM',
-            'amount': 'Rp 12.000',
-          },
-        ];
+        _recentTransactions = transactions;
       });
     } catch (e) {
       print('Error loading transactions: $e');
+    }
+  }
+
+  Future<void> _loadWeeklySales() async {
+    setState(() => _isLoadingWeeklySales = true);
+    try {
+      final now = DateTime.now();
+      final sevenDaysAgo = now.subtract(const Duration(days: 7));
+
+      // Initialize daily sales map
+      Map<String, double> dailySales = {};
+      List<Map<String, dynamic>> salesData = [];
+
+      for (int i = 6; i >= 0; i--) {
+        final date = now.subtract(Duration(days: i));
+        final key = DateFormat('yyyy-MM-dd').format(date);
+        dailySales[key] = 0;
+        salesData.add({
+          'date': date,
+          'dayName': DateFormat('EEE').format(date),
+          'amount': 0.0,
+        });
+      }
+
+      // Fetch orders from API
+      try {
+        final orders = await _orderService.getOrdersByDateRange(
+          machineId: 'VM01', // or get from config
+          startDate: sevenDaysAgo,
+          endDate: now.add(const Duration(days: 1)),
+        );
+
+        // Aggregate by day
+        for (var order in orders) {
+          if (order['status'] == 'COMPLETED' || order['status'] == 'PAID') {
+            final createdAt = DateTime.parse(order['created_at']);
+            final dateKey = DateFormat('yyyy-MM-dd').format(createdAt);
+            final amount = (order['total_amount'] as num?)?.toDouble() ?? 0.0;
+
+            if (dailySales.containsKey(dateKey)) {
+              dailySales[dateKey] = (dailySales[dateKey] ?? 0) + amount;
+            }
+          }
+        }
+
+        // Update salesData with actual amounts
+        for (int i = 0; i < salesData.length; i++) {
+          final dateKey = DateFormat('yyyy-MM-dd').format(salesData[i]['date']);
+          salesData[i]['amount'] = dailySales[dateKey] ?? 0.0;
+        }
+      } catch (e) {
+        print('Error fetching orders for weekly sales: $e');
+        // Keep zeros if API fails
+      }
+
+      double total = salesData.fold(
+        0,
+        (sum, item) => sum + (item['amount'] as double),
+      );
+
+      setState(() {
+        _weeklySalesData = salesData;
+        _totalWeeklySales = total;
+        _isLoadingWeeklySales = false;
+      });
+    } catch (e) {
+      print('Error loading weekly sales: $e');
+      setState(() {
+        _isLoadingWeeklySales = false;
+      });
     }
   }
 
@@ -316,6 +511,12 @@ class _AdminDashboardModernScreenState
   }
 
   Widget _buildWeeklySalesSection(bool isDark) {
+    final formatCurrency = NumberFormat.currency(
+      locale: 'id_ID',
+      symbol: 'Rp ',
+      decimalDigits: 0,
+    );
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -344,79 +545,166 @@ class _AdminDashboardModernScreenState
                     : const Color(0xFFE2E8F0),
               ),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Rp 3.250.000',
-                  style: TextStyle(
-                    fontSize: 32,
-                    fontWeight: FontWeight.bold,
-                    color: isDark ? Colors.white : const Color(0xFF0F172A),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Text(
-                      'Last 7 Days',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: isDark
-                            ? const Color(0xFF94A3B8)
-                            : const Color(0xFF64748B),
+            child: _isLoadingWeeklySales
+                ? const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(32),
+                      child: CircularProgressIndicator(),
+                    ),
+                  )
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        formatCurrency.format(_totalWeeklySales),
+                        style: TextStyle(
+                          fontSize: 32,
+                          fontWeight: FontWeight.bold,
+                          color: isDark
+                              ? Colors.white
+                              : const Color(0xFF0F172A),
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      '+5.2%',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: isDark
-                            ? const Color(0xFF4ADE80)
-                            : const Color(0xFF16A34A),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Text(
+                            'Last 7 Days',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: isDark
+                                  ? const Color(0xFF94A3B8)
+                                  : const Color(0xFF64748B),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            '+5.2%',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: isDark
+                                  ? const Color(0xFF4ADE80)
+                                  : const Color(0xFF16A34A),
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                // Simple chart placeholder
-                Container(
-                  height: 150,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        const Color(0xFF13ECDA).withOpacity(0.2),
-                        const Color(0xFF13ECDA).withOpacity(0.0),
-                      ],
-                    ),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: CustomPaint(painter: SimpleChartPainter()),
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-                      .map(
-                        (day) => Text(
-                          day,
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: isDark
-                                ? const Color(0xFF94A3B8)
-                                : const Color(0xFF64748B),
+                      const SizedBox(height: 24),
+                      if (_weeklySalesData.isNotEmpty)
+                        SizedBox(
+                          height: 150,
+                          child: Padding(
+                            padding: const EdgeInsets.only(right: 8),
+                            child: BarChart(
+                              BarChartData(
+                                alignment: BarChartAlignment.spaceAround,
+                                maxY:
+                                    _weeklySalesData
+                                        .map((e) => e['amount'] as double)
+                                        .reduce((a, b) => a > b ? a : b) *
+                                    1.2,
+                                barTouchData: BarTouchData(
+                                  enabled: true,
+                                  touchTooltipData: BarTouchTooltipData(
+                                    getTooltipItem:
+                                        (group, groupIndex, rod, rodIndex) {
+                                          return BarTooltipItem(
+                                            formatCurrency.format(rod.toY),
+                                            TextStyle(
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 12,
+                                            ),
+                                          );
+                                        },
+                                  ),
+                                ),
+                                titlesData: FlTitlesData(
+                                  show: true,
+                                  rightTitles: const AxisTitles(
+                                    sideTitles: SideTitles(showTitles: false),
+                                  ),
+                                  topTitles: const AxisTitles(
+                                    sideTitles: SideTitles(showTitles: false),
+                                  ),
+                                  leftTitles: const AxisTitles(
+                                    sideTitles: SideTitles(showTitles: false),
+                                  ),
+                                  bottomTitles: AxisTitles(
+                                    sideTitles: SideTitles(
+                                      showTitles: true,
+                                      getTitlesWidget: (value, meta) {
+                                        if (value.toInt() >=
+                                            _weeklySalesData.length) {
+                                          return const SizedBox.shrink();
+                                        }
+                                        return Padding(
+                                          padding: const EdgeInsets.only(
+                                            top: 8,
+                                          ),
+                                          child: Text(
+                                            _weeklySalesData[value
+                                                .toInt()]['dayName'],
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.bold,
+                                              color: isDark
+                                                  ? const Color(0xFF94A3B8)
+                                                  : const Color(0xFF64748B),
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                ),
+                                gridData: const FlGridData(show: false),
+                                borderData: FlBorderData(show: false),
+                                barGroups: _weeklySalesData.asMap().entries.map(
+                                  (entry) {
+                                    return BarChartGroupData(
+                                      x: entry.key,
+                                      barRods: [
+                                        BarChartRodData(
+                                          toY: entry.value['amount'] as double,
+                                          gradient: const LinearGradient(
+                                            colors: [
+                                              Color(0xFF13ECDA),
+                                              Color(0xFF0D9B8A),
+                                            ],
+                                            begin: Alignment.topCenter,
+                                            end: Alignment.bottomCenter,
+                                          ),
+                                          width: 20,
+                                          borderRadius: const BorderRadius.only(
+                                            topLeft: Radius.circular(6),
+                                            topRight: Radius.circular(6),
+                                          ),
+                                        ),
+                                      ],
+                                    );
+                                  },
+                                ).toList(),
+                              ),
+                            ),
+                          ),
+                        )
+                      else
+                        Container(
+                          height: 150,
+                          alignment: Alignment.center,
+                          child: Text(
+                            'No sales data available',
+                            style: TextStyle(
+                              color: isDark
+                                  ? const Color(0xFF94A3B8)
+                                  : const Color(0xFF64748B),
+                            ),
                           ),
                         ),
-                      )
-                      .toList(),
-                ),
-              ],
-            ),
+                    ],
+                  ),
           ),
         ),
       ],
@@ -948,41 +1236,4 @@ class _AdminDashboardModernScreenState
       ),
     );
   }
-}
-
-// Simple Chart Painter
-class SimpleChartPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = const Color(0xFF13ECDA)
-      ..strokeWidth = 3
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round;
-
-    final path = Path();
-    final points = [
-      Offset(0, size.height * 0.7),
-      Offset(size.width * 0.14, size.height * 0.2),
-      Offset(size.width * 0.28, size.height * 0.4),
-      Offset(size.width * 0.42, size.height * 0.6),
-      Offset(size.width * 0.56, size.height * 0.3),
-      Offset(size.width * 0.70, size.height * 0.5),
-      Offset(size.width, size.height * 0.1),
-    ];
-
-    path.moveTo(points[0].dx, points[0].dy);
-    for (int i = 1; i < points.length; i++) {
-      final p0 = points[i - 1];
-      final p1 = points[i];
-      final cp1 = Offset(p0.dx + (p1.dx - p0.dx) / 2, p0.dy);
-      final cp2 = Offset(p0.dx + (p1.dx - p0.dx) / 2, p1.dy);
-      path.cubicTo(cp1.dx, cp1.dy, cp2.dx, cp2.dy, p1.dx, p1.dy);
-    }
-
-    canvas.drawPath(path, paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

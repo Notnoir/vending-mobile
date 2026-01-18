@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
+import 'admin_add_product_screen.dart';
+import 'admin_edit_product_screen.dart';
 
 class AdminInventoryScreen extends StatefulWidget {
   const AdminInventoryScreen({super.key});
@@ -208,6 +210,25 @@ class _AdminInventoryScreenState extends State<AdminInventoryScreen> {
               SliverToBoxAdapter(child: const SizedBox(height: 100)),
             ],
           ),
+        ),
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () async {
+          final result = await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const AdminAddProductScreen(),
+            ),
+          );
+          if (result == true) {
+            _loadInventory();
+          }
+        },
+        backgroundColor: const Color(0xFF13ECDA),
+        icon: const Icon(Icons.add, color: Colors.white),
+        label: const Text(
+          'Add Product',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
         ),
       ),
     );
@@ -967,8 +988,17 @@ class _AdminInventoryScreenState extends State<AdminInventoryScreen> {
                             ? const Color(0xFF6B8A8A)
                             : const Color(0xFF6B8A8A),
                       ),
-                      onPressed: () {
-                        // TODO: Edit product
+                      onPressed: () async {
+                        final result = await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                AdminEditProductScreen(product: product),
+                          ),
+                        );
+                        if (result == true) {
+                          _loadInventory();
+                        }
                       },
                     ),
                   ),
@@ -987,7 +1017,7 @@ class _AdminInventoryScreenState extends State<AdminInventoryScreen> {
                     ),
                     child: TextButton(
                       onPressed: () {
-                        // TODO: Adjust stock
+                        _showAdjustStockDialog(context, product, isDark);
                       },
                       style: TextButton.styleFrom(
                         padding: EdgeInsets.zero,
@@ -1012,6 +1042,276 @@ class _AdminInventoryScreenState extends State<AdminInventoryScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  // Adjust Stock Dialog
+  void _showAdjustStockDialog(
+    BuildContext context,
+    Map<String, dynamic> product,
+    bool isDark,
+  ) {
+    final quantityController = TextEditingController();
+    final reasonController = TextEditingController();
+    String selectedType = 'MANUAL_ADJUST';
+    bool isLoading = false;
+
+    showDialog(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              backgroundColor: isDark ? const Color(0xFF162E2E) : Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              title: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Adjust Stock',
+                    style: TextStyle(
+                      color: isDark ? Colors.white : const Color(0xFF0C1D1D),
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    product['name'],
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: isDark
+                          ? const Color(0xFF6B8A8A)
+                          : const Color(0xFF6B8A8A),
+                      fontWeight: FontWeight.normal,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: isDark
+                          ? const Color(0xFF0F2323)
+                          : const Color(0xFFF5F5F5),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Current Stock:',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: isDark
+                                ? const Color(0xFF6B8A8A)
+                                : const Color(0xFF6B8A8A),
+                          ),
+                        ),
+                        Text(
+                          '${product['currentStock']} / ${product['capacity']}',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: isDark ? Colors.white : Colors.black,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    DropdownButtonFormField<String>(
+                      value: selectedType,
+                      decoration: InputDecoration(
+                        labelText: 'Adjustment Type',
+                        labelStyle: TextStyle(
+                          color: isDark
+                              ? const Color(0xFF6B8A8A)
+                              : const Color(0xFF6B8A8A),
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        filled: true,
+                        fillColor: isDark
+                            ? const Color(0xFF0F2323)
+                            : const Color(0xFFF5F5F5),
+                      ),
+                      dropdownColor: isDark
+                          ? const Color(0xFF162E2E)
+                          : Colors.white,
+                      style: TextStyle(
+                        color: isDark ? Colors.white : Colors.black,
+                      ),
+                      items: const [
+                        DropdownMenuItem(
+                          value: 'RESTOCK',
+                          child: Text('Restock (Add)'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'MANUAL_ADJUST',
+                          child: Text('Manual Adjust (Set)'),
+                        ),
+                        DropdownMenuItem(value: 'AUDIT', child: Text('Audit')),
+                      ],
+                      onChanged: (value) {
+                        setDialogState(() => selectedType = value!);
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: quantityController,
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(
+                        labelText: selectedType == 'RESTOCK'
+                            ? 'Quantity to Add *'
+                            : 'New Stock Quantity *',
+                        labelStyle: TextStyle(
+                          color: isDark
+                              ? const Color(0xFF6B8A8A)
+                              : const Color(0xFF6B8A8A),
+                        ),
+                        hintText: selectedType == 'RESTOCK'
+                            ? 'e.g., 10'
+                            : 'e.g., 45',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        filled: true,
+                        fillColor: isDark
+                            ? const Color(0xFF0F2323)
+                            : const Color(0xFFF5F5F5),
+                      ),
+                      style: TextStyle(
+                        color: isDark ? Colors.white : Colors.black,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: reasonController,
+                      maxLines: 2,
+                      decoration: InputDecoration(
+                        labelText: 'Reason',
+                        labelStyle: TextStyle(
+                          color: isDark
+                              ? const Color(0xFF6B8A8A)
+                              : const Color(0xFF6B8A8A),
+                        ),
+                        hintText: 'Optional',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        filled: true,
+                        fillColor: isDark
+                            ? const Color(0xFF0F2323)
+                            : const Color(0xFFF5F5F5),
+                      ),
+                      style: TextStyle(
+                        color: isDark ? Colors.white : Colors.black,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: isLoading
+                      ? null
+                      : () => Navigator.pop(dialogContext),
+                  child: Text(
+                    'Cancel',
+                    style: TextStyle(
+                      color: isDark
+                          ? const Color(0xFF6B8A8A)
+                          : const Color(0xFF6B8A8A),
+                    ),
+                  ),
+                ),
+                ElevatedButton(
+                  onPressed: isLoading
+                      ? null
+                      : () async {
+                          if (quantityController.text.isEmpty) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Please enter quantity'),
+                              ),
+                            );
+                            return;
+                          }
+
+                          setDialogState(() => isLoading = true);
+
+                          try {
+                            final quantity = int.parse(quantityController.text);
+                            final apiService = ApiService();
+
+                            // Build request body without null reason
+                            final Map<String, dynamic> requestBody = {
+                              'slot_id': product['id'],
+                              'quantity': quantity,
+                              'change_type': selectedType,
+                              'performed_by': 'admin',
+                            };
+
+                            // Only add reason if not empty
+                            if (reasonController.text.trim().isNotEmpty) {
+                              requestBody['reason'] = reasonController.text
+                                  .trim();
+                            }
+
+                            await apiService.post(
+                              '/stock/update',
+                              body: requestBody,
+                            );
+
+                            if (!context.mounted) return;
+                            Navigator.pop(dialogContext);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Stock adjusted successfully'),
+                                backgroundColor: Color(0xFF10B981),
+                              ),
+                            );
+                            _loadInventory();
+                          } catch (e) {
+                            if (!context.mounted) return;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Error: ${e.toString()}')),
+                            );
+                          } finally {
+                            if (context.mounted) {
+                              setDialogState(() => isLoading = false);
+                            }
+                          }
+                        },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF13ECDA),
+                    foregroundColor: Colors.white,
+                  ),
+                  child: isLoading
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.white,
+                            ),
+                          ),
+                        )
+                      : const Text('Adjust Stock'),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 

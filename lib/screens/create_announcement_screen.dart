@@ -2,22 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../config/api_config.dart';
+import '../services/auth_service.dart';
 
 class CreateAnnouncementScreen extends StatefulWidget {
   final VoidCallback onSuccess;
 
-  const CreateAnnouncementScreen({
-    Key? key,
-    required this.onSuccess,
-  }) : super(key: key);
+  const CreateAnnouncementScreen({Key? key, required this.onSuccess})
+    : super(key: key);
 
   @override
-  State<CreateAnnouncementScreen> createState() => _CreateAnnouncementScreenState();
+  State<CreateAnnouncementScreen> createState() =>
+      _CreateAnnouncementScreenState();
 }
 
 class _CreateAnnouncementScreenState extends State<CreateAnnouncementScreen> {
   final _formKey = GlobalKey<FormState>();
-  
+
   // Form fields
   final _titleController = TextEditingController();
   final _messageController = TextEditingController();
@@ -29,7 +29,7 @@ class _CreateAnnouncementScreenState extends State<CreateAnnouncementScreen> {
   bool _hasActionButton = false;
   final _actionButtonTextController = TextEditingController();
   final _actionButtonUrlController = TextEditingController();
-  
+
   bool _isSaving = false;
 
   @override
@@ -90,7 +90,7 @@ class _CreateAnnouncementScreenState extends State<CreateAnnouncementScreen> {
       case 'WARNING':
         return Icons.warning;
       case 'MAINTENANCE':
-        return Icons.build  ;
+        return Icons.build;
       case 'PROMOTION':
         return Icons.celebration;
       case 'INFO':
@@ -106,7 +106,11 @@ class _CreateAnnouncementScreenState extends State<CreateAnnouncementScreen> {
 
     try {
       final token = await _getToken();
-      
+
+      if (token == null) {
+        throw Exception('Authentication required. Please login again.');
+      }
+
       final body = {
         'title': _titleController.text,
         'message': _messageController.text,
@@ -118,9 +122,15 @@ class _CreateAnnouncementScreenState extends State<CreateAnnouncementScreen> {
         'show_on_web': _showOnWeb,
         'show_on_mobile': _showOnMobile,
         'has_action_button': _hasActionButton,
-        'action_button_text': _hasActionButton ? _actionButtonTextController.text : null,
-        'action_button_url': _hasActionButton ? _actionButtonUrlController.text : null,
+        'action_button_text': _hasActionButton
+            ? _actionButtonTextController.text
+            : null,
+        'action_button_url': _hasActionButton
+            ? _actionButtonUrlController.text
+            : null,
       };
+
+      print('Creating announcement with body: ${json.encode(body)}');
 
       final response = await http.post(
         Uri.parse('${ApiConfig.baseUrl}/announcements'),
@@ -131,23 +141,39 @@ class _CreateAnnouncementScreenState extends State<CreateAnnouncementScreen> {
         body: json.encode(body),
       );
 
+      print('Response status: ${response.statusCode}');
+      print('Response body: ${response.body}');
+
       if (response.statusCode == 201 || response.statusCode == 200) {
         widget.onSuccess();
         Navigator.pop(context);
         _showSuccess('Announcement created successfully');
+      } else if (response.statusCode == 401 || response.statusCode == 403) {
+        throw Exception('Unauthorized access. Please login as admin.');
       } else {
-        throw Exception('Failed to create announcement');
+        final errorData = json.decode(response.body);
+        throw Exception(
+          errorData['message'] ?? 'Failed to create announcement',
+        );
       }
     } catch (e) {
+      print('Error creating announcement: $e');
       _showError('Error creating announcement: $e');
     } finally {
       setState(() => _isSaving = false);
     }
   }
 
-  Future<String> _getToken() async {
-    // Get from secure storage
-    return 'admin_token';
+  Future<String?> _getToken() async {
+    // Get actual token from AuthService
+    final authService = AuthService();
+    await authService.init();
+
+    if (authService.token == null) {
+      print('No auth token found - user may need to login');
+    }
+
+    return authService.token;
   }
 
   void _showError(String message) {
@@ -165,7 +191,7 @@ class _CreateAnnouncementScreenState extends State<CreateAnnouncementScreen> {
   @override
   Widget build(BuildContext context) {
     final typeColor = _getTypeColor(_type);
-    
+
     return Scaffold(
       backgroundColor: const Color(0xFFF5F8F8),
       appBar: AppBar(
@@ -197,13 +223,13 @@ class _CreateAnnouncementScreenState extends State<CreateAnnouncementScreen> {
           children: [
             // Preview Card
             _buildPreviewCard(typeColor),
-            
+
             const SizedBox(height: 24),
 
             // Basic Info Section
             _buildSectionTitle('Basic Information'),
             const SizedBox(height: 12),
-            
+
             // Title
             _buildTextField(
               controller: _titleController,
@@ -216,7 +242,7 @@ class _CreateAnnouncementScreenState extends State<CreateAnnouncementScreen> {
                 return null;
               },
             ),
-            
+
             const SizedBox(height: 16),
 
             // Message
@@ -254,8 +280,14 @@ class _CreateAnnouncementScreenState extends State<CreateAnnouncementScreen> {
                 DropdownMenuItem(value: 'INFO', child: Text('📘 Info')),
                 DropdownMenuItem(value: 'WARNING', child: Text('⚠️ Warning')),
                 DropdownMenuItem(value: 'ERROR', child: Text('🚨 Error')),
-                DropdownMenuItem(value: 'MAINTENANCE', child: Text('🔧 Maintenance')),
-                DropdownMenuItem(value: 'PROMOTION', child: Text('🎉 Promotion')),
+                DropdownMenuItem(
+                  value: 'MAINTENANCE',
+                  child: Text('🔧 Maintenance'),
+                ),
+                DropdownMenuItem(
+                  value: 'PROMOTION',
+                  child: Text('🎉 Promotion'),
+                ),
               ],
               onChanged: (value) {
                 if (value != null) _handleTypeChange(value);
@@ -337,16 +369,16 @@ class _CreateAnnouncementScreenState extends State<CreateAnnouncementScreen> {
 
             if (_hasActionButton) ...[
               const SizedBox(height: 16),
-              
+
               // Button Text
               _buildTextField(
                 controller: _actionButtonTextController,
                 label: 'Button Text',
                 hint: 'e.g., Learn More, Shop Now',
               ),
-              
+
               const SizedBox(height: 16),
-              
+
               // Button URL
               _buildTextField(
                 controller: _actionButtonUrlController,
@@ -377,7 +409,9 @@ class _CreateAnnouncementScreenState extends State<CreateAnnouncementScreen> {
                         height: 24,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Colors.white,
+                          ),
                         ),
                       )
                     : const Text(
@@ -422,7 +456,7 @@ class _CreateAnnouncementScreenState extends State<CreateAnnouncementScreen> {
             ),
           ),
           const SizedBox(height: 16),
-          
+
           // Icon
           Container(
             width: 60,
@@ -431,18 +465,16 @@ class _CreateAnnouncementScreenState extends State<CreateAnnouncementScreen> {
               color: typeColor.withOpacity(0.1),
               shape: BoxShape.circle,
             ),
-            child: Icon(
-              _getTypeIcon(_type),
-              color: typeColor,
-              size: 32,
-            ),
+            child: Icon(_getTypeIcon(_type), color: typeColor, size: 32),
           ),
-          
+
           const SizedBox(height: 12),
-          
+
           // Title
           Text(
-            _titleController.text.isEmpty ? 'Announcement Title' : _titleController.text,
+            _titleController.text.isEmpty
+                ? 'Announcement Title'
+                : _titleController.text,
             style: const TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
@@ -452,16 +484,15 @@ class _CreateAnnouncementScreenState extends State<CreateAnnouncementScreen> {
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
           ),
-          
+
           const SizedBox(height: 8),
-          
+
           // Message
           Text(
-            _messageController.text.isEmpty ? 'Your message will appear here...' : _messageController.text,
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey[600],
-            ),
+            _messageController.text.isEmpty
+                ? 'Your message will appear here...'
+                : _messageController.text,
+            style: TextStyle(fontSize: 14, color: Colors.grey[600]),
             textAlign: TextAlign.center,
             maxLines: 3,
             overflow: TextOverflow.ellipsis,
@@ -521,9 +552,7 @@ class _CreateAnnouncementScreenState extends State<CreateAnnouncementScreen> {
         labelText: label,
         hintText: hint,
         helperText: helperText,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
         filled: true,
         fillColor: Colors.white,
       ),
@@ -532,7 +561,9 @@ class _CreateAnnouncementScreenState extends State<CreateAnnouncementScreen> {
       validator: validator,
       onChanged: (value) {
         // Update preview on change
-        if (label.contains('Title') || label.contains('Message') || label.contains('Button')) {
+        if (label.contains('Title') ||
+            label.contains('Message') ||
+            label.contains('Button')) {
           setState(() {});
         }
       },

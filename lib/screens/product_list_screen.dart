@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../models/product.dart';
 import '../services/product_service.dart';
 import '../widgets/mcd_product_card.dart';
 import '../theme/app_theme.dart';
+import '../providers/cart_provider.dart';
 import 'product_detail_screen.dart';
 import 'prescription_scan_screen.dart';
 import 'health_news_screen.dart';
@@ -276,13 +278,21 @@ class _ProductListScreenState extends State<ProductListScreen> {
           // Scan Prescription Card
           Expanded(
             child: GestureDetector(
-              onTap: () {
-                Navigator.push(
+              onTap: () async {
+                // Navigate and wait for recommended products result
+                final recommendedProducts = await Navigator.push(
                   context,
                   MaterialPageRoute(
                     builder: (context) => const PrescriptionScanScreen(),
                   ),
                 );
+
+                // If we got recommended products, show them
+                if (recommendedProducts != null &&
+                    recommendedProducts is List &&
+                    recommendedProducts.isNotEmpty) {
+                  _showRecommendedProducts(recommendedProducts);
+                }
               },
               child: Container(
                 padding: const EdgeInsets.all(12),
@@ -490,6 +500,176 @@ class _ProductListScreenState extends State<ProductListScreen> {
               onPressed: _loadProducts,
               icon: const Icon(Icons.refresh),
               label: const Text('Coba Lagi'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showRecommendedProducts(List recommendedProducts) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.7,
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          children: [
+            // Header
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.green.shade50,
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(20),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.green.shade100,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.check_circle,
+                      color: Colors.green.shade700,
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Obat yang Tersedia',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Text(
+                          'Berdasarkan resep dokter Anda',
+                          style: TextStyle(fontSize: 12, color: Colors.black54),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+            ),
+            // Products list
+            Expanded(
+              child: ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: recommendedProducts.length,
+                itemBuilder: (context, index) {
+                  final product = recommendedProducts[index];
+                  return Card(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    child: ListTile(
+                      leading: product['image_url'] != null
+                          ? ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.network(
+                                product['image_url'],
+                                width: 50,
+                                height: 50,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) =>
+                                    Container(
+                                      width: 50,
+                                      height: 50,
+                                      color: Colors.grey.shade200,
+                                      child: const Icon(Icons.medication),
+                                    ),
+                              ),
+                            )
+                          : Container(
+                              width: 50,
+                              height: 50,
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade200,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Icon(Icons.medication),
+                            ),
+                      title: Text(
+                        product['name'] ?? 'Unknown',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      subtitle: Text(
+                        'Rp ${product['price']?.toStringAsFixed(0) ?? '0'}',
+                        style: const TextStyle(
+                          color: AppTheme.primaryBlue,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      trailing: ElevatedButton(
+                        onPressed: () {
+                          // Convert map to Product model and add to cart
+                          try {
+                            print('Adding product to cart: ${product}');
+                            final productModel = Product.fromJson(product);
+                            final cartProvider = Provider.of<CartProvider>(
+                              context,
+                              listen: false,
+                            );
+                            cartProvider.addProduct(productModel, quantity: 1);
+
+                            print(
+                              'Product added to cart. Total items: ${cartProvider.itemCount}',
+                            );
+
+                            Navigator.pop(context);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  '${product['name']} ditambahkan ke keranjang',
+                                ),
+                                backgroundColor: Colors.green,
+                                duration: const Duration(seconds: 2),
+                              ),
+                            );
+                          } catch (e, stackTrace) {
+                            print('Error adding to cart: $e');
+                            print('Stack trace: $stackTrace');
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Gagal menambahkan ke keranjang'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.primaryBlue,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        child: const Text('Beli'),
+                      ),
+                    ),
+                  );
+                },
+              ),
             ),
           ],
         ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
+import '../services/machine_data_service.dart';
 
 class MachineMonitoringScreen extends StatefulWidget {
   final String? machineId;
@@ -18,6 +19,8 @@ class _MachineMonitoringScreenState extends State<MachineMonitoringScreen> {
   List<Map<String, dynamic>> _monitoringData = [];
   bool _isLoading = true;
   String _selectedPeriod = 'today';
+  final _machineDataService = MachineDataService();
+  String? _errorMessage;
 
   @override
   void initState() {
@@ -29,38 +32,70 @@ class _MachineMonitoringScreenState extends State<MachineMonitoringScreen> {
   }
 
   Future<void> _loadMonitoringData() async {
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
     try {
-      await Future.delayed(const Duration(milliseconds: 500));
-      setState(() {
-        _monitoringData = _generateMockData();
-        _isLoading = false;
-      });
-    } catch (e) {
-      print('Error loading monitoring data: $e');
-      setState(() => _isLoading = false);
-    }
-  }
+      // Calculate date range based on selected period
+      final now = DateTime.now();
+      String? fromDate;
+      String? toDate = now.toIso8601String();
 
-  List<Map<String, dynamic>> _generateMockData() {
-    final now = DateTime.now();
-    final data = <Map<String, dynamic>>[];
+      switch (_selectedPeriod) {
+        case 'today':
+          fromDate = DateTime(now.year, now.month, now.day).toIso8601String();
+          break;
+        case 'week':
+          fromDate = now.subtract(const Duration(days: 7)).toIso8601String();
+          break;
+        case 'month':
+          fromDate = now.subtract(const Duration(days: 30)).toIso8601String();
+          break;
+      }
 
-    for (int day = 6; day >= 0; day--) {
-      final date = now.subtract(Duration(days: day));
-      for (final hour in [10, 12, 14]) {
-        data.add({
-          'recorded_at': DateTime(date.year, date.month, date.day, hour),
-          'temperature': 22.0 + (day * 0.5) + (hour == 14 ? 2.0 : 0),
-          'humidity': 60.0 + (day * 1.2) - (hour == 14 ? 5.0 : 0),
-          'door_status': 'closed',
-          'power_status': 'normal',
-          'stock_level': 85 - (day * 2),
-          'sales_count': 3 + (hour == 14 ? 2 : 0),
+      // Fetch real data from API
+      final response = await _machineDataService.getMachineHistory(
+        machineId: _selectedMachine,
+        from: fromDate,
+        to: toDate,
+        limit: 100,
+      );
+
+      if (response['success'] == true) {
+        final List<dynamic> rawData = response['data'] ?? [];
+
+        setState(() {
+          _monitoringData = rawData.map((item) {
+            return {
+              'recorded_at': DateTime.parse(
+                item['recorded_at'] ?? DateTime.now().toIso8601String(),
+              ),
+              'temperature': (item['temperature'] as num?)?.toDouble() ?? 0.0,
+              'humidity': (item['humidity'] as num?)?.toDouble() ?? 0.0,
+              'door_status': item['door_status'] ?? 'unknown',
+              'power_status': item['power_status'] ?? 'unknown',
+              'status': item['status'] ?? 'unknown',
+            };
+          }).toList();
+          _isLoading = false;
+        });
+      } else {
+        setState(() {
+          _errorMessage = response['message'] ?? 'Failed to load data';
+          _monitoringData = [];
+          _isLoading = false;
         });
       }
+    } catch (e) {
+      print('Error loading monitoring data: $e');
+      setState(() {
+        _errorMessage = 'Network error: ${e.toString()}';
+        _monitoringData = [];
+        _isLoading = false;
+      });
     }
-    return data;
   }
 
   List<Map<String, dynamic>> _getFilteredData() {
@@ -81,10 +116,17 @@ class _MachineMonitoringScreenState extends State<MachineMonitoringScreen> {
           : const Color(0xFFF6F8F8),
       appBar: AppBar(
         backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+        foregroundColor: isDark ? Colors.white : const Color(0xFF0F172A),
         elevation: 0,
-        title: const Text(
+        title: Text(
           'Machine Monitoring',
-          style: TextStyle(fontWeight: FontWeight.bold),
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: isDark ? Colors.white : const Color(0xFF0F172A),
+          ),
+        ),
+        iconTheme: IconThemeData(
+          color: isDark ? Colors.white : const Color(0xFF0F172A),
         ),
         actions: [
           IconButton(
@@ -95,6 +137,8 @@ class _MachineMonitoringScreenState extends State<MachineMonitoringScreen> {
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
+          : _errorMessage != null
+          ? _buildErrorState(isDark)
           : RefreshIndicator(
               onRefresh: _loadMonitoringData,
               child: SingleChildScrollView(
@@ -109,43 +153,121 @@ class _MachineMonitoringScreenState extends State<MachineMonitoringScreen> {
                     const SizedBox(height: 16),
                     _buildTimeSlotTabs(isDark),
                     const SizedBox(height: 24),
-                    _buildChartCard(
-                      'Temperature (°C)',
-                      Icons.thermostat_outlined,
-                      Colors.orange,
-                      isDark,
-                      _buildTemperatureChart(),
-                    ),
-                    const SizedBox(height: 16),
-                    _buildChartCard(
-                      'Humidity (%)',
-                      Icons.water_drop_outlined,
-                      Colors.blue,
-                      isDark,
-                      _buildHumidityChart(),
-                    ),
-                    const SizedBox(height: 16),
-                    _buildChartCard(
-                      'Stock Level (%)',
-                      Icons.inventory_2_outlined,
-                      Colors.green,
-                      isDark,
-                      _buildStockLevelChart(),
-                    ),
-                    const SizedBox(height: 16),
-                    _buildChartCard(
-                      'Sales Count',
-                      Icons.shopping_cart_outlined,
-                      Colors.purple,
-                      isDark,
-                      _buildSalesChart(),
-                    ),
-                    const SizedBox(height: 16),
-                    _buildStatusCards(isDark),
+
+                    // Show charts only if data available
+                    if (_monitoringData.isNotEmpty) ...[
+                      _buildChartCard(
+                        'Temperature (°C)',
+                        Icons.thermostat_outlined,
+                        Colors.orange,
+                        isDark,
+                        _buildTemperatureChart(),
+                      ),
+                      const SizedBox(height: 16),
+                      _buildChartCard(
+                        'Humidity (%)',
+                        Icons.water_drop_outlined,
+                        Colors.blue,
+                        isDark,
+                        _buildHumidityChart(),
+                      ),
+                      const SizedBox(height: 16),
+                      _buildStatusCards(isDark),
+                    ] else
+                      _buildNoDataState(isDark),
                   ],
                 ),
               ),
             ),
+    );
+  }
+
+  Widget _buildErrorState(bool isDark) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.error_outline,
+              size: 64,
+              color: Colors.red.withOpacity(0.5),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Failed to Load Data',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: isDark ? Colors.white : const Color(0xFF0F172A),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _errorMessage ?? 'Unknown error',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 14,
+                color: isDark
+                    ? const Color(0xFF94A3B8)
+                    : const Color(0xFF64748B),
+              ),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: _loadMonitoringData,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Retry'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF13ECDA),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 32,
+                  vertical: 16,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNoDataState(bool isDark) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          children: [
+            Icon(
+              Icons.bar_chart_outlined,
+              size: 64,
+              color: isDark ? const Color(0xFF475569) : const Color(0xFFCBD5E1),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'No Data Available',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: isDark ? Colors.white : const Color(0xFF0F172A),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'No monitoring data found for the selected period.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 14,
+                color: isDark
+                    ? const Color(0xFF94A3B8)
+                    : const Color(0xFF64748B),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -337,7 +459,10 @@ class _MachineMonitoringScreenState extends State<MachineMonitoringScreen> {
             ],
           ),
           const SizedBox(height: 20),
-          SizedBox(height: 200, child: chart),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: SizedBox(height: 200, child: chart),
+          ),
         ],
       ),
     );
@@ -356,76 +481,104 @@ class _MachineMonitoringScreenState extends State<MachineMonitoringScreen> {
       );
     }).toList();
 
-    return LineChart(
-      LineChartData(
-        gridData: FlGridData(
-          show: true,
-          drawVerticalLine: false,
-          getDrawingHorizontalLine: (value) =>
-              FlLine(color: Colors.grey.withOpacity(0.1), strokeWidth: 1),
-        ),
-        titlesData: FlTitlesData(
-          rightTitles: const AxisTitles(
-            sideTitles: SideTitles(showTitles: false),
+    // Calculate dynamic Y-axis range
+    final temps = filteredData
+        .map((e) => (e['temperature'] as num).toDouble())
+        .toList();
+    final minTemp = temps.reduce((a, b) => a < b ? a : b);
+    final maxTemp = temps.reduce((a, b) => a > b ? a : b);
+    final tempRange = maxTemp - minTemp;
+    final minY = (minTemp - tempRange * 0.2).floorToDouble();
+    final maxY = (maxTemp + tempRange * 0.2).ceilToDouble();
+
+    return Padding(
+      padding: const EdgeInsets.only(right: 12, top: 8),
+      child: LineChart(
+        LineChartData(
+          clipData: FlClipData.all(),
+          gridData: FlGridData(
+            show: true,
+            drawVerticalLine: false,
+            getDrawingHorizontalLine: (value) =>
+                FlLine(color: Colors.grey.withOpacity(0.1), strokeWidth: 1),
           ),
-          topTitles: const AxisTitles(
-            sideTitles: SideTitles(showTitles: false),
-          ),
-          bottomTitles: AxisTitles(
-            sideTitles: SideTitles(
-              showTitles: true,
-              reservedSize: 30,
-              getTitlesWidget: (value, meta) {
-                if (value.toInt() >= filteredData.length) return const Text('');
-                final date =
-                    filteredData[value.toInt()]['recorded_at'] as DateTime;
-                return Padding(
-                  padding: const EdgeInsets.only(top: 8.0),
-                  child: Text(
-                    DateFormat('dd/MM\nHH:mm').format(date),
-                    style: const TextStyle(fontSize: 9),
-                    textAlign: TextAlign.center,
-                  ),
-                );
-              },
+          titlesData: FlTitlesData(
+            rightTitles: const AxisTitles(
+              sideTitles: SideTitles(showTitles: false),
             ),
-          ),
-          leftTitles: AxisTitles(
-            sideTitles: SideTitles(
-              showTitles: true,
-              reservedSize: 40,
-              getTitlesWidget: (value, meta) => Text(
-                '${value.toInt()}°C',
-                style: const TextStyle(fontSize: 10),
+            topTitles: const AxisTitles(
+              sideTitles: SideTitles(showTitles: false),
+            ),
+            bottomTitles: AxisTitles(
+              sideTitles: SideTitles(
+                showTitles: true,
+                reservedSize: 40,
+                interval: filteredData.length > 5
+                    ? (filteredData.length / 5).ceilToDouble()
+                    : 1,
+                getTitlesWidget: (value, meta) {
+                  if (value.toInt() >= filteredData.length)
+                    return const SizedBox.shrink();
+                  final date =
+                      filteredData[value.toInt()]['recorded_at'] as DateTime;
+                  return Padding(
+                    padding: const EdgeInsets.only(top: 8.0),
+                    child: Text(
+                      DateFormat('dd/MM\nHH:mm').format(date),
+                      style: const TextStyle(fontSize: 9),
+                      textAlign: TextAlign.center,
+                    ),
+                  );
+                },
+              ),
+            ),
+            leftTitles: AxisTitles(
+              sideTitles: SideTitles(
+                showTitles: true,
+                reservedSize: 40,
+                interval: ((maxY - minY) / 5).ceilToDouble(),
+                getTitlesWidget: (value, meta) => Text(
+                  '${value.toInt()}°C',
+                  style: const TextStyle(fontSize: 10),
+                ),
               ),
             ),
           ),
-        ),
-        borderData: FlBorderData(show: false),
-        minX: 0,
-        maxX: (filteredData.length - 1).toDouble(),
-        minY: 18,
-        maxY: 32,
-        lineBarsData: [
-          LineChartBarData(
-            spots: spots,
-            isCurved: true,
-            color: Colors.orange,
-            barWidth: 3,
-            dotData: const FlDotData(show: true),
-            belowBarData: BarAreaData(
-              show: true,
-              gradient: LinearGradient(
-                colors: [
-                  Colors.orange.withOpacity(0.3),
-                  Colors.orange.withOpacity(0.0),
-                ],
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
+          borderData: FlBorderData(show: false),
+          minX: 0,
+          maxX: (filteredData.length - 1).toDouble(),
+          minY: minY,
+          maxY: maxY,
+          lineBarsData: [
+            LineChartBarData(
+              spots: spots,
+              isCurved: true,
+              color: Colors.orange,
+              barWidth: 3,
+              dotData: FlDotData(
+                show: true,
+                getDotPainter: (spot, percent, barData, index) {
+                  return FlDotCirclePainter(
+                    radius: 3,
+                    color: Colors.orange,
+                    strokeWidth: 0,
+                  );
+                },
+              ),
+              belowBarData: BarAreaData(
+                show: true,
+                gradient: LinearGradient(
+                  colors: [
+                    Colors.orange.withOpacity(0.3),
+                    Colors.orange.withOpacity(0.0),
+                  ],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -446,235 +599,104 @@ class _MachineMonitoringScreenState extends State<MachineMonitoringScreen> {
         )
         .toList();
 
-    return LineChart(
-      LineChartData(
-        gridData: FlGridData(
-          show: true,
-          drawVerticalLine: false,
-          getDrawingHorizontalLine: (value) =>
-              FlLine(color: Colors.grey.withOpacity(0.1), strokeWidth: 1),
-        ),
-        titlesData: FlTitlesData(
-          rightTitles: const AxisTitles(
-            sideTitles: SideTitles(showTitles: false),
-          ),
-          topTitles: const AxisTitles(
-            sideTitles: SideTitles(showTitles: false),
-          ),
-          bottomTitles: AxisTitles(
-            sideTitles: SideTitles(
-              showTitles: true,
-              reservedSize: 30,
-              getTitlesWidget: (value, meta) {
-                if (value.toInt() >= filteredData.length) return const Text('');
-                final date =
-                    filteredData[value.toInt()]['recorded_at'] as DateTime;
-                return Padding(
-                  padding: const EdgeInsets.only(top: 8.0),
-                  child: Text(
-                    DateFormat('dd/MM\nHH:mm').format(date),
-                    style: const TextStyle(fontSize: 9),
-                    textAlign: TextAlign.center,
-                  ),
-                );
-              },
-            ),
-          ),
-          leftTitles: AxisTitles(
-            sideTitles: SideTitles(
-              showTitles: true,
-              reservedSize: 40,
-              getTitlesWidget: (value, meta) => Text(
-                '${value.toInt()}%',
-                style: const TextStyle(fontSize: 10),
-              ),
-            ),
-          ),
-        ),
-        borderData: FlBorderData(show: false),
-        minX: 0,
-        maxX: (filteredData.length - 1).toDouble(),
-        minY: 50,
-        maxY: 80,
-        lineBarsData: [
-          LineChartBarData(
-            spots: spots,
-            isCurved: true,
-            color: Colors.blue,
-            barWidth: 3,
-            dotData: const FlDotData(show: true),
-            belowBarData: BarAreaData(
-              show: true,
-              gradient: LinearGradient(
-                colors: [
-                  Colors.blue.withOpacity(0.3),
-                  Colors.blue.withOpacity(0.0),
-                ],
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStockLevelChart() {
-    final filteredData = _getFilteredData();
-    if (filteredData.isEmpty)
-      return const Center(child: Text('No data available'));
-
-    final spots = filteredData
-        .asMap()
-        .entries
-        .map(
-          (entry) => FlSpot(
-            entry.key.toDouble(),
-            (entry.value['stock_level'] as num).toDouble(),
-          ),
-        )
+    // Calculate dynamic Y-axis range
+    final humidities = filteredData
+        .map((e) => (e['humidity'] as num).toDouble())
         .toList();
+    final minHum = humidities.reduce((a, b) => a < b ? a : b);
+    final maxHum = humidities.reduce((a, b) => a > b ? a : b);
+    final humRange = maxHum - minHum;
+    final minY = (minHum - humRange * 0.2).floorToDouble();
+    final maxY = (maxHum + humRange * 0.2).ceilToDouble();
 
-    return LineChart(
-      LineChartData(
-        gridData: FlGridData(
-          show: true,
-          drawVerticalLine: false,
-          getDrawingHorizontalLine: (value) =>
-              FlLine(color: Colors.grey.withOpacity(0.1), strokeWidth: 1),
-        ),
-        titlesData: FlTitlesData(
-          rightTitles: const AxisTitles(
-            sideTitles: SideTitles(showTitles: false),
+    return Padding(
+      padding: const EdgeInsets.only(right: 12, top: 8),
+      child: LineChart(
+        LineChartData(
+          clipData: FlClipData.all(),
+          gridData: FlGridData(
+            show: true,
+            drawVerticalLine: false,
+            getDrawingHorizontalLine: (value) =>
+                FlLine(color: Colors.grey.withOpacity(0.1), strokeWidth: 1),
           ),
-          topTitles: const AxisTitles(
-            sideTitles: SideTitles(showTitles: false),
-          ),
-          bottomTitles: AxisTitles(
-            sideTitles: SideTitles(
-              showTitles: true,
-              reservedSize: 30,
-              getTitlesWidget: (value, meta) {
-                if (value.toInt() >= filteredData.length) return const Text('');
-                final date =
-                    filteredData[value.toInt()]['recorded_at'] as DateTime;
-                return Padding(
-                  padding: const EdgeInsets.only(top: 8.0),
-                  child: Text(
-                    DateFormat('dd/MM\nHH:mm').format(date),
-                    style: const TextStyle(fontSize: 9),
-                    textAlign: TextAlign.center,
-                  ),
-                );
-              },
+          titlesData: FlTitlesData(
+            rightTitles: const AxisTitles(
+              sideTitles: SideTitles(showTitles: false),
             ),
-          ),
-          leftTitles: AxisTitles(
-            sideTitles: SideTitles(
-              showTitles: true,
-              reservedSize: 40,
-              getTitlesWidget: (value, meta) => Text(
-                '${value.toInt()}%',
-                style: const TextStyle(fontSize: 10),
+            topTitles: const AxisTitles(
+              sideTitles: SideTitles(showTitles: false),
+            ),
+            bottomTitles: AxisTitles(
+              sideTitles: SideTitles(
+                showTitles: true,
+                reservedSize: 40,
+                interval: filteredData.length > 5
+                    ? (filteredData.length / 5).ceilToDouble()
+                    : 1,
+                getTitlesWidget: (value, meta) {
+                  if (value.toInt() >= filteredData.length)
+                    return const SizedBox.shrink();
+                  final date =
+                      filteredData[value.toInt()]['recorded_at'] as DateTime;
+                  return Padding(
+                    padding: const EdgeInsets.only(top: 8.0),
+                    child: Text(
+                      DateFormat('dd/MM\nHH:mm').format(date),
+                      style: const TextStyle(fontSize: 9),
+                      textAlign: TextAlign.center,
+                    ),
+                  );
+                },
+              ),
+            ),
+            leftTitles: AxisTitles(
+              sideTitles: SideTitles(
+                showTitles: true,
+                reservedSize: 40,
+                interval: ((maxY - minY) / 5).ceilToDouble(),
+                getTitlesWidget: (value, meta) => Text(
+                  '${value.toInt()}%',
+                  style: const TextStyle(fontSize: 10),
+                ),
               ),
             ),
           ),
-        ),
-        borderData: FlBorderData(show: false),
-        minX: 0,
-        maxX: (filteredData.length - 1).toDouble(),
-        minY: 60,
-        maxY: 100,
-        lineBarsData: [
-          LineChartBarData(
-            spots: spots,
-            isCurved: true,
-            color: Colors.green,
-            barWidth: 3,
-            dotData: const FlDotData(show: true),
-            belowBarData: BarAreaData(
-              show: true,
-              gradient: LinearGradient(
-                colors: [
-                  Colors.green.withOpacity(0.3),
-                  Colors.green.withOpacity(0.0),
-                ],
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
+          borderData: FlBorderData(show: false),
+          minX: 0,
+          maxX: (filteredData.length - 1).toDouble(),
+          minY: minY,
+          maxY: maxY,
+          lineBarsData: [
+            LineChartBarData(
+              spots: spots,
+              isCurved: true,
+              color: Colors.blue,
+              barWidth: 3,
+              dotData: FlDotData(
+                show: true,
+                getDotPainter: (spot, percent, barData, index) {
+                  return FlDotCirclePainter(
+                    radius: 3,
+                    color: Colors.blue,
+                    strokeWidth: 0,
+                  );
+                },
+              ),
+              belowBarData: BarAreaData(
+                show: true,
+                gradient: LinearGradient(
+                  colors: [
+                    Colors.blue.withOpacity(0.3),
+                    Colors.blue.withOpacity(0.0),
+                  ],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                ),
               ),
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSalesChart() {
-    final filteredData = _getFilteredData();
-    if (filteredData.isEmpty)
-      return const Center(child: Text('No data available'));
-
-    final barGroups = filteredData.asMap().entries.map((entry) {
-      return BarChartGroupData(
-        x: entry.key,
-        barRods: [
-          BarChartRodData(
-            toY: (entry.value['sales_count'] as num).toDouble(),
-            color: Colors.purple,
-            width: 16,
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(6),
-              topRight: Radius.circular(6),
-            ),
-          ),
-        ],
-      );
-    }).toList();
-
-    return BarChart(
-      BarChartData(
-        maxY: 10,
-        titlesData: FlTitlesData(
-          rightTitles: const AxisTitles(
-            sideTitles: SideTitles(showTitles: false),
-          ),
-          topTitles: const AxisTitles(
-            sideTitles: SideTitles(showTitles: false),
-          ),
-          bottomTitles: AxisTitles(
-            sideTitles: SideTitles(
-              showTitles: true,
-              reservedSize: 30,
-              getTitlesWidget: (value, meta) {
-                if (value.toInt() >= filteredData.length) return const Text('');
-                final date =
-                    filteredData[value.toInt()]['recorded_at'] as DateTime;
-                return Padding(
-                  padding: const EdgeInsets.only(top: 8.0),
-                  child: Text(
-                    DateFormat('dd/MM\nHH:mm').format(date),
-                    style: const TextStyle(fontSize: 9),
-                    textAlign: TextAlign.center,
-                  ),
-                );
-              },
-            ),
-          ),
-          leftTitles: AxisTitles(
-            sideTitles: SideTitles(
-              showTitles: true,
-              reservedSize: 40,
-              getTitlesWidget: (value, meta) => Text(
-                value.toInt().toString(),
-                style: const TextStyle(fontSize: 10),
-              ),
-            ),
-          ),
+          ],
         ),
-        borderData: FlBorderData(show: false),
-        gridData: FlGridData(show: true, drawVerticalLine: false),
-        barGroups: barGroups,
       ),
     );
   }
@@ -682,6 +704,10 @@ class _MachineMonitoringScreenState extends State<MachineMonitoringScreen> {
   Widget _buildStatusCards(bool isDark) {
     if (_monitoringData.isEmpty) return const SizedBox.shrink();
     final latestData = _monitoringData.last;
+
+    final doorStatus = latestData['door_status'] ?? 'unknown';
+    final powerStatus = latestData['power_status'] ?? 'unknown';
+    final status = latestData['status'] ?? 'unknown';
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -701,8 +727,8 @@ class _MachineMonitoringScreenState extends State<MachineMonitoringScreen> {
               child: _buildStatusCard(
                 Icons.door_front_door_outlined,
                 'Door Status',
-                latestData['door_status'],
-                Colors.blue,
+                doorStatus,
+                _getStatusColor(doorStatus),
                 isDark,
               ),
             ),
@@ -711,15 +737,39 @@ class _MachineMonitoringScreenState extends State<MachineMonitoringScreen> {
               child: _buildStatusCard(
                 Icons.power_outlined,
                 'Power Status',
-                latestData['power_status'],
-                Colors.green,
+                powerStatus,
+                _getStatusColor(powerStatus),
                 isDark,
               ),
             ),
           ],
         ),
+        const SizedBox(height: 12),
+        _buildStatusCard(
+          Icons.monitor_heart_outlined,
+          'Machine Status',
+          status,
+          _getStatusColor(status),
+          isDark,
+        ),
       ],
     );
+  }
+
+  Color _getStatusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'normal':
+      case 'closed':
+        return Colors.green;
+      case 'warning':
+      case 'open':
+        return Colors.orange;
+      case 'error':
+      case 'offline':
+        return Colors.red;
+      default:
+        return Colors.grey;
+    }
   }
 
   Widget _buildStatusCard(

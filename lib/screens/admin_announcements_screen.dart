@@ -2,13 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../config/api_config.dart';
+import '../services/auth_service.dart';
 import 'create_announcement_screen.dart';
 
 class AdminAnnouncementsScreen extends StatefulWidget {
   const AdminAnnouncementsScreen({Key? key}) : super(key: key);
 
   @override
-  State<AdminAnnouncementsScreen> createState() => _AdminAnnouncementsScreenState();
+  State<AdminAnnouncementsScreen> createState() =>
+      _AdminAnnouncementsScreenState();
 }
 
 class _AdminAnnouncementsScreenState extends State<AdminAnnouncementsScreen> {
@@ -16,7 +18,7 @@ class _AdminAnnouncementsScreenState extends State<AdminAnnouncementsScreen> {
   bool _isLoading = true;
   String _searchQuery = '';
   String _filterStatus = 'all'; // all, active, inactive
-  
+
   // Stats
   int _totalCount = 0;
   int _activeCount = 0;
@@ -30,31 +32,44 @@ class _AdminAnnouncementsScreenState extends State<AdminAnnouncementsScreen> {
 
   Future<void> _fetchAnnouncements() async {
     setState(() => _isLoading = true);
-    
+
     try {
       final token = await _getToken();
+
+      if (token == null) {
+        throw Exception('Authentication required. Please login again.');
+      }
+
       final response = await http.get(
         Uri.parse('${ApiConfig.baseUrl}/announcements'),
-        headers: {
-          'Authorization': 'Bearer $token',
-        },
+        headers: {'Authorization': 'Bearer $token'},
       );
+
+      print('Announcements response: ${response.statusCode}');
+      print('Response body: ${response.body}');
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        final announcements = (data['data'] as List)
-            .map((e) => e as Map<String, dynamic>)
-            .toList();
+
+        // Backend returns data in 'data' field
+        final announcements =
+            (data['data'] as List?)
+                ?.map((e) => e as Map<String, dynamic>)
+                .toList() ??
+            [];
 
         setState(() {
           _announcements = announcements;
           _calculateStats();
           _isLoading = false;
         });
+      } else if (response.statusCode == 401 || response.statusCode == 403) {
+        throw Exception('Unauthorized access. Please login as admin.');
       } else {
-        throw Exception('Failed to load announcements');
+        throw Exception('Failed to load announcements: ${response.statusCode}');
       }
     } catch (e) {
+      print('Error fetching announcements: $e');
       setState(() => _isLoading = false);
       _showError('Error loading announcements: $e');
     }
@@ -66,24 +81,30 @@ class _AdminAnnouncementsScreenState extends State<AdminAnnouncementsScreen> {
     _inactiveCount = _totalCount - _activeCount;
   }
 
-  Future<String> _getToken() async {
-    // Get from secure storage or shared preferences
-    // For now, returning placeholder
-    return 'admin_token';
+  Future<String?> _getToken() async {
+    // Get actual token from AuthService
+    final authService = AuthService();
+    await authService.init();
+
+    if (authService.token == null) {
+      print('No auth token found - user may need to login');
+    }
+
+    return authService.token;
   }
 
   List<Map<String, dynamic>> get _filteredAnnouncements {
     var filtered = _announcements.where((announcement) {
-      final matchesSearch = announcement['title']
-              .toString()
-              .toLowerCase()
-              .contains(_searchQuery.toLowerCase()) ||
-          announcement['message']
-              .toString()
-              .toLowerCase()
-              .contains(_searchQuery.toLowerCase());
+      final matchesSearch =
+          announcement['title'].toString().toLowerCase().contains(
+            _searchQuery.toLowerCase(),
+          ) ||
+          announcement['message'].toString().toLowerCase().contains(
+            _searchQuery.toLowerCase(),
+          );
 
-      final matchesFilter = _filterStatus == 'all' ||
+      final matchesFilter =
+          _filterStatus == 'all' ||
           (_filterStatus == 'active' && announcement['is_active'] == true) ||
           (_filterStatus == 'inactive' && announcement['is_active'] == false);
 
@@ -92,8 +113,12 @@ class _AdminAnnouncementsScreenState extends State<AdminAnnouncementsScreen> {
 
     // Sort by created_at descending
     filtered.sort((a, b) {
-      final dateA = DateTime.parse(a['created_at'] ?? DateTime.now().toIso8601String());
-      final dateB = DateTime.parse(b['created_at'] ?? DateTime.now().toIso8601String());
+      final dateA = DateTime.parse(
+        a['created_at'] ?? DateTime.now().toIso8601String(),
+      );
+      final dateB = DateTime.parse(
+        b['created_at'] ?? DateTime.now().toIso8601String(),
+      );
       return dateB.compareTo(dateA);
     });
 
@@ -114,7 +139,11 @@ class _AdminAnnouncementsScreenState extends State<AdminAnnouncementsScreen> {
 
       if (response.statusCode == 200) {
         _fetchAnnouncements();
-        _showSuccess(!currentStatus ? 'Announcement activated' : 'Announcement deactivated');
+        _showSuccess(
+          !currentStatus
+              ? 'Announcement activated'
+              : 'Announcement deactivated',
+        );
       } else {
         throw Exception('Failed to update announcement');
       }
@@ -135,9 +164,7 @@ class _AdminAnnouncementsScreenState extends State<AdminAnnouncementsScreen> {
       final token = await _getToken();
       final response = await http.delete(
         Uri.parse('${ApiConfig.baseUrl}/announcements/$id'),
-        headers: {
-          'Authorization': 'Bearer $token',
-        },
+        headers: {'Authorization': 'Bearer $token'},
       );
 
       if (response.statusCode == 200) {
@@ -279,7 +306,7 @@ class _AdminAnnouncementsScreenState extends State<AdminAnnouncementsScreen> {
                     },
                   ),
                   const SizedBox(height: 12),
-                  
+
                   // Filter Chips
                   Row(
                     children: [
@@ -299,31 +326,34 @@ class _AdminAnnouncementsScreenState extends State<AdminAnnouncementsScreen> {
               child: _isLoading
                   ? const Center(child: CircularProgressIndicator())
                   : _filteredAnnouncements.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.campaign_outlined,
-                                  size: 64, color: Colors.grey[400]),
-                              const SizedBox(height: 16),
-                              Text(
-                                'No announcements found',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  color: Colors.grey[600],
-                                ),
-                              ),
-                            ],
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.campaign_outlined,
+                            size: 64,
+                            color: Colors.grey[400],
                           ),
-                        )
-                      : ListView.builder(
-                          padding: const EdgeInsets.all(16),
-                          itemCount: _filteredAnnouncements.length,
-                          itemBuilder: (context, index) {
-                            final announcement = _filteredAnnouncements[index];
-                            return _buildAnnouncementCard(announcement);
-                          },
-                        ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'No announcements found',
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: _filteredAnnouncements.length,
+                      itemBuilder: (context, index) {
+                        final announcement = _filteredAnnouncements[index];
+                        return _buildAnnouncementCard(announcement);
+                      },
+                    ),
             ),
           ],
         ),
@@ -415,14 +445,10 @@ class _AdminAnnouncementsScreenState extends State<AdminAnnouncementsScreen> {
                     color: typeColor.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Icon(
-                    _getTypeIcon(type),
-                    color: typeColor,
-                    size: 24,
-                  ),
+                  child: Icon(_getTypeIcon(type), color: typeColor, size: 24),
                 ),
                 const SizedBox(width: 12),
-                
+
                 // Title & Type
                 Expanded(
                   child: Column(
@@ -459,7 +485,7 @@ class _AdminAnnouncementsScreenState extends State<AdminAnnouncementsScreen> {
                     ],
                   ),
                 ),
-                
+
                 // Status Badge
                 Container(
                   padding: const EdgeInsets.symmetric(
@@ -503,10 +529,7 @@ class _AdminAnnouncementsScreenState extends State<AdminAnnouncementsScreen> {
             // Message
             Text(
               announcement['message'] ?? '',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey[600],
-              ),
+              style: TextStyle(fontSize: 14, color: Colors.grey[600]),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
@@ -541,17 +564,14 @@ class _AdminAnnouncementsScreenState extends State<AdminAnnouncementsScreen> {
               children: [
                 // Toggle Active
                 IconButton(
-                  onPressed: () => _toggleActive(
-                    announcement['id'],
-                    isActive,
-                  ),
+                  onPressed: () => _toggleActive(announcement['id'], isActive),
                   icon: Icon(
                     isActive ? Icons.toggle_on : Icons.toggle_off,
                     color: isActive ? Colors.green : Colors.grey,
                   ),
                   iconSize: 32,
                 ),
-                
+
                 // Delete
                 IconButton(
                   onPressed: () => _deleteAnnouncement(announcement['id']),

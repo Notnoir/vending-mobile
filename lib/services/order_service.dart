@@ -95,6 +95,32 @@ class OrderService {
     }
   }
 
+  // Get orders by date range for a machine
+  Future<List<Map<String, dynamic>>> getOrdersByDateRange({
+    required String machineId,
+    required DateTime startDate,
+    required DateTime endDate,
+  }) async {
+    try {
+      final response = await _apiService.get(
+        ApiEndpoints.machineOrders(machineId),
+      );
+
+      final List<dynamic> orders = response['orders'] ?? [];
+
+      // Filter by date range
+      final filteredOrders = orders.where((order) {
+        final createdAt = DateTime.parse(order['created_at']);
+        return createdAt.isAfter(startDate) && createdAt.isBefore(endDate);
+      }).toList();
+
+      return filteredOrders.cast<Map<String, dynamic>>();
+    } catch (e) {
+      print('Error getting orders by date range: $e');
+      return [];
+    }
+  }
+
   // Get completed orders
   Future<List<Order>> getCompletedOrders() async {
     try {
